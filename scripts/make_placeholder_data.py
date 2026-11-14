@@ -16,11 +16,20 @@ COLS = 64
 
 
 def make_dem() -> np.ndarray:
-    """Return a smooth synthetic elevation surface, not NASA data."""
+    """Return a varied synthetic elevation surface, not NASA data."""
     y, x = np.mgrid[0:ROWS, 0:COLS]
     ridge = 650.0 * np.exp(-(((x - 34.0) / 2.2) ** 2 + ((y - 32.0) / 12.0) ** 2))
-    undulation = 12.0 * np.sin(x / 8.0) * np.cos(y / 11.0)
-    return (1000.0 + ridge + undulation).astype("float32")
+    rolling_hills = (
+        35.0 * np.sin(x / 6.0) * np.cos(y / 8.0)
+        + 22.0 * np.sin((x + y) / 4.5)
+        - 16.0 * np.cos((x - 2.0 * y) / 7.0)
+    )
+    crater = -70.0 * np.exp(-(((x - 13.0) / 8.0) ** 2 + ((y - 47.0) / 6.0) ** 2))
+    terrace = 30.0 * np.exp(-(((x - 51.0) / 10.0) ** 2 + ((y - 13.0) / 14.0) ** 2))
+    fine_texture = 5.0 * np.sin(x * 1.4 + y * 0.7)
+    return (1000.0 + ridge + rolling_hills + crater + terrace + fine_texture).astype(
+        "float32"
+    )
 
 
 def main() -> None:

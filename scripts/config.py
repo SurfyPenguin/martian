@@ -49,4 +49,4 @@ EVA_HOURS = 4.0
 DOSE_RATE_MSV_PER_HOUR = 0.02
 # ROUTE SETTING: emphasize steeper cells while keeping the route within the
 # configured EVA time limit.
-SLOPE_COST_POWER = 1.1
+SLOPE_COST_POWER = 1.0

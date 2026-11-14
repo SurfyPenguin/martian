@@ -126,11 +126,9 @@ def main() -> None:
         x_size_m, y_size_m = cell_size_meters(dem_source)
         rows, cols = walkable.shape
 
-    elevation_norm = (elevation_m - elevation_m.min()) / (
-        elevation_m.max() - elevation_m.min()
-    )
+    low_proxy, high_proxy = np.quantile(elevation_m, [1 / 3, 2 / 3])
     mineral_proxy = np.where(
-        elevation_norm < 0.35, 1, np.where(elevation_norm > 0.65, 2, 3)
+        elevation_m <= low_proxy, 1, np.where(elevation_m >= high_proxy, 2, 3)
     )
 
     points = [HABITAT_PIXEL, *SCIENCE_TARGET_PIXELS, HABITAT_PIXEL]

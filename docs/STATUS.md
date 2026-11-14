@@ -24,7 +24,7 @@
 - Added grid scale bar, north arrow, habitat-relative coordinate readout, and
   per-target leg tooltips
 - Improved slope map with a cool-to-warm severity ramp and labeled degree key
-- Route cost now penalizes steepness quadratically, favoring a gentler detour
+- Route cost penalizes steepness while retaining an EVA-feasible detour
 - Refined tablet UI hierarchy, safety status, layer controls, and mobile layout
 - Added placeholder lat/lon metadata, an elevation-derived terrain layer,
   map reset/leg interactions, and a lat/lon/elevation/slope inspector
@@ -36,6 +36,8 @@
   Habitat-to-target mission sequence
 - Added a clearly labeled synthetic mineral-proxy layer with toggle, opacity,
   legend, and inspector zone values; no mineral identifications are claimed
+- Increased synthetic terrain variance with rolling hills, crater-like
+  depression, terrace, fine texture, and an elevation-balanced proxy map
 - Setup steps documented in README
 
 ## In progress
