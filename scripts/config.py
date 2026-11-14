@@ -12,6 +12,9 @@ PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 DEM_PATH = PROCESSED_DATA_DIR / "dem.tif"
 SLOPE_PATH = PROCESSED_DATA_DIR / "slope.tif"
 HAZARD_PATH = PROCESSED_DATA_DIR / "hazard.tif"
+ROUTE_PATH = PROCESSED_DATA_DIR / "route.geojson"
+STATS_PATH = PROCESSED_DATA_DIR / "stats.json"
+GRID_PATH = PROCESSED_DATA_DIR / "grid.json"
 
 MARS_RADIUS_KM = 3389.5
 KM_PER_DEG = 2 * math.pi * MARS_RADIUS_KM / 360
@@ -31,6 +34,10 @@ AOI_BOUNDS = {
     "min_lon": CENTER_LON - dlon,
     "max_lon": CENTER_LON + dlon,
 }
+
+# PLACEHOLDER mission points in (row, column) raster pixels.
+HABITAT_PIXEL = (32, 6)
+SCIENCE_TARGET_PIXELS = ((16, 24), (42, 34), (30, 55))
 
 # ASSUMPTION: maximum slope considered walkable by a suited astronaut.
 MAX_WALKABLE_SLOPE_DEG = 15.0

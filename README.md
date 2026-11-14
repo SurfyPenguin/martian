@@ -5,15 +5,18 @@ Mount Sharp. The current DEM is explicitly synthetic placeholder data; replace
 it with a documented NASA DEM before using the planner for science or mission
 decisions.
 
-The current setup only generates the placeholder DEM. The slope/route pipeline
-and Leaflet planner described in the project plan are not implemented yet.
+The demo runs entirely on clearly labeled synthetic placeholder terrain. It
+includes slope/hazard processing, a low-risk A* route, and a Leaflet planning
+map; replace the placeholder outputs with documented NASA data before mission
+use.
 
-## Run the setup
+## Run the demo
 
 1. Create and activate a Python 3.11+ virtual environment.
 2. Install dependencies: `python -m pip install -r requirements.txt`
-3. Generate the local placeholder DEM: `python scripts/make_placeholder_data.py`
-4. Inspect the result at `data/processed/dem.tif`.
+3. Generate all processed data: `python scripts/make_placeholder_data.py && python scripts/slope.py && python scripts/route.py`
+4. Serve the repository from the `web/` directory: `cd web && python -m http.server 8000 --directory ..`
+5. Open `http://localhost:8000/web/`.
 
 Adjust the AOI placeholders and planning assumptions in `scripts/config.py`.
 Every planning value there is an assumption and must be replaced or validated

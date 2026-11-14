@@ -16,6 +16,9 @@
 - Synthetic placeholder DEM generator (data/processed/dem.tif is NOT real NASA data)
 - Slope and binary hazard rasters generated from the placeholder DEM with
   nodata-safe edge handling
+- A* EVA route through three placeholder science targets and back to habitat
+- Leaflet demo with slope/hazard, route, target layers, opacity controls, and
+  safety stats
 - Setup steps documented in README
 
 ## In progress
@@ -25,6 +28,6 @@
 - Real DEM clip and imagery for the AOI (not downloaded yet)
 
 ## Next
-1. scripts/route.py
-2. web/ Leaflet app
-3. Safety sidebar, photos
+1. Replace placeholder terrain and targets with documented NASA data
+2. Add real surface imagery and destination photos
+3. Add weather/radiation data sources and validation

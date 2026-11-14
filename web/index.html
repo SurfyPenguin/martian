@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MarsWalk Planner</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ3F5HfQ3K7hWJg8x6pZL6L3wE5p9wM=" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="shell">
+    <aside class="sidebar">
+      <div class="eyebrow">MARSWALK / EVA PLANNER</div>
+      <h1>Mount Sharp field plan</h1>
+      <div class="banner">Prototype on synthetic placeholder terrain</div>
+
+      <section>
+        <h2>Layers</h2>
+        <label class="layer-row"><input id="slope-toggle" type="checkbox" checked>
+          <span>Slope</span><input id="slope-opacity" type="range" min="0" max="1" step="0.05" value="0.55"></label>
+        <label class="layer-row"><input id="hazard-toggle" type="checkbox" checked>
+          <span>Hazard</span><input id="hazard-opacity" type="range" min="0" max="1" step="0.05" value="0.7"></label>
+        <label class="layer-row"><input id="route-toggle" type="checkbox" checked>
+          <span>Route</span><input id="route-opacity" type="range" min="0" max="1" step="0.05" value="1"></label>
+        <label class="layer-row"><input id="targets-toggle" type="checkbox" checked>
+          <span>Targets</span><input id="targets-opacity" type="range" min="0" max="1" step="0.05" value="1"></label>
+      </section>
+
+      <section class="safety">
+        <h2>Safety summary</h2>
+        <div class="stat"><span>Route distance</span><strong id="distance">--</strong></div>
+        <div class="stat"><span>Estimated EVA time</span><strong id="time">--</strong></div>
+        <div class="stat"><span>Return margin</span><strong id="margin">--</strong></div>
+        <div class="stat"><span>Estimated dose</span><strong id="dose">--</strong></div>
+      </section>
+
+      <section class="legend">
+        <h2>Mission note</h2>
+        <p>Red cells exceed the configured walkable slope assumption. Targets and route are placeholders for demo navigation only.</p>
+        <p id="load-status" class="load-status">Loading processed layers...</p>
+      </section>
+    </aside>
+    <div id="map" aria-label="Mars EVA planning map"></div>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>

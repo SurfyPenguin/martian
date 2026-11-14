@@ -1,12 +1,25 @@
 """Create slope and walkability rasters from a DEM."""
 
+import math
 import numpy as np
 import rasterio
 
 if __package__:
-    from .config import DEM_PATH, HAZARD_PATH, MAX_WALKABLE_SLOPE_DEG, SLOPE_PATH
+    from .config import (
+        DEM_PATH,
+        HAZARD_PATH,
+        MARS_RADIUS_KM,
+        MAX_WALKABLE_SLOPE_DEG,
+        SLOPE_PATH,
+    )
 else:
-    from config import DEM_PATH, HAZARD_PATH, MAX_WALKABLE_SLOPE_DEG, SLOPE_PATH
+    from config import (
+        DEM_PATH,
+        HAZARD_PATH,
+        MARS_RADIUS_KM,
+        MAX_WALKABLE_SLOPE_DEG,
+        SLOPE_PATH,
+    )
 
 
 PLACEHOLDER_TAGS = {
@@ -40,10 +53,27 @@ def calculate_slope(
     return slope_deg
 
 
+def cell_size_meters(source: rasterio.DatasetReader) -> tuple[float, float]:
+    """Return x/y cell sizes in meters for projected or placeholder rasters."""
+    x_size, y_size = source.res
+    if source.crs is not None:
+        return abs(x_size), abs(y_size)
+
+    tags = source.tags()
+    if tags.get("CRS_STATUS", "").startswith("UNSPECIFIED"):
+        center_lat = math.radians((source.bounds.top + source.bounds.bottom) / 2)
+        mars_radius_m = MARS_RADIUS_KM * 1000
+        return (
+            abs(x_size) * mars_radius_m * math.cos(center_lat) * math.pi / 180,
+            abs(y_size) * mars_radius_m * math.pi / 180,
+        )
+    raise ValueError("DEM has no CRS or documented placeholder coordinate model")
+
+
 def main() -> None:
     with rasterio.open(DEM_PATH) as source:
         dem = source.read(1).astype("float32")
-        x_size, y_size = source.res
+        x_size, y_size = cell_size_meters(source)
         nodata = source.nodata
         valid = np.isfinite(dem)
         if nodata is not None:
@@ -68,7 +98,7 @@ def main() -> None:
         profile.update(count=1, dtype="float32", nodata=slope_nodata)
         with rasterio.open(SLOPE_PATH, "w", **profile) as output:
             output.write(slope_deg, 1)
-            output.update_tags(**PLACEHOLDER_TAGS)
+            output.update_tags(**PLACEHOLDER_TAGS, CELL_SIZE_UNITS="meters")
 
         hazard_profile = source.profile.copy()
         hazard_profile.update(count=1, dtype="uint8", nodata=255)
@@ -76,6 +106,7 @@ def main() -> None:
             output.write(hazard, 1)
             output.update_tags(
                 **PLACEHOLDER_TAGS,
+                CELL_SIZE_UNITS="meters",
                 HAZARD_ENCODING="0=walkable, 1=over max slope, 255=nodata",
             )
 
