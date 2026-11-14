@@ -6,7 +6,6 @@ import math
 
 import numpy as np
 import rasterio
-from rasterio.transform import xy
 
 if __package__:
     from .config import (
@@ -115,20 +114,16 @@ def main() -> None:
         hazard = hazard_source.read(1)
         walkable = (hazard == 0) & np.isfinite(slope_deg)
         x_size_m, y_size_m = cell_size_meters(dem_source)
-        transform = dem_source.transform
-        dem_bounds = dem_source.bounds
         rows, cols = walkable.shape
 
     points = [HABITAT_PIXEL, *SCIENCE_TARGET_PIXELS, HABITAT_PIXEL]
-    route_pixels: list[tuple[int, int]] = []
+    route_segments: list[list[tuple[int, int]]] = []
     for start, goal in zip(points, points[1:]):
         segment = astar(start, goal, walkable, slope_deg, x_size_m, y_size_m)
-        route_pixels.extend(segment if not route_pixels else segment[1:])
-
-    route_coordinates = [
-        list(xy(transform, row, col, offset="center"))
-        for row, col in route_pixels
-    ]
+        route_segments.append(segment)
+    route_pixels = route_segments[0][:]
+    for segment in route_segments[1:]:
+        route_pixels.extend(segment[1:])
     distance_km = sum(
         math.hypot(
             (route_pixels[index + 1][0] - route_pixels[index][0]) * y_size_m,
@@ -141,15 +136,8 @@ def main() -> None:
         raise ValueError(f"Route requires {time_h:.2f} h, over EVA limit {EVA_HOURS:.2f} h")
 
     targets = [
-        {
-            "id": f"target-{index + 1}",
-            "row": row,
-            "col": col,
-            "lon": coordinates[0],
-            "lat": coordinates[1],
-        }
+        {"id": f"target-{index + 1}", "row": row, "col": col}
         for index, (row, col) in enumerate(SCIENCE_TARGET_PIXELS)
-        for coordinates in [xy(transform, row, col, offset="center")]
     ]
     stats = {
         "data_status": PLACEHOLDER_STATUS,
@@ -164,32 +152,40 @@ def main() -> None:
         "rows": rows,
         "cols": cols,
         "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
-        "bounds": [
-            dem_bounds.left,
-            dem_bounds.bottom,
-            dem_bounds.right,
-            dem_bounds.top,
-        ],
         "slope_deg": np.round(slope_deg, 3).tolist(),
         "walkable": walkable.tolist(),
+        "route_pixels": route_pixels,
+        "route_segments": route_segments,
         "targets": targets,
-        "habitat": {
-            "row": HABITAT_PIXEL[0],
-            "col": HABITAT_PIXEL[1],
-            "lon": xy(transform, *HABITAT_PIXEL, offset="center")[0],
-            "lat": xy(transform, *HABITAT_PIXEL, offset="center")[1],
-        },
+        "habitat": {"row": HABITAT_PIXEL[0], "col": HABITAT_PIXEL[1]},
     }
     geojson = {
         "type": "FeatureCollection",
-        "features": [
+        "properties": {
+            "data_status": PLACEHOLDER_STATUS,
+            "coordinate_system": "grid row,col",
+        },
+        "features": [],
+    }
+    outbound = route_segments[:-1]
+    outbound_pixels = outbound[0][:]
+    for segment in outbound[1:]:
+        outbound_pixels.extend(segment[1:])
+    for leg_name, pixels in (("outbound", outbound_pixels), ("return", route_segments[-1])):
+        geojson["features"].append(
             {
                 "type": "Feature",
-                "properties": {"data_status": PLACEHOLDER_STATUS},
-                "geometry": {"type": "LineString", "coordinates": route_coordinates},
+                "properties": {
+                    "data_status": PLACEHOLDER_STATUS,
+                    "leg": leg_name,
+                    "coordinate_system": "grid row,col",
+                },
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [list(pixel) for pixel in pixels],
+                },
             }
-        ],
-    }
+        )
     ROUTE_PATH.write_text(json.dumps(geojson, indent=2))
     STATS_PATH.write_text(json.dumps(stats, indent=2) + "\n")
     GRID_PATH.write_text(json.dumps(grid) + "\n")

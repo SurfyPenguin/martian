@@ -5,7 +5,11 @@ function formatNumber(value, unit, digits = 2) {
   return `${Number(value).toFixed(digits)} ${unit}`;
 }
 
-function makeRasterOverlay(grid, mode) {
+function gridToLeaflet([row, col]) {
+  return [window.grid.rows - row, col];
+}
+
+function makeRasterOverlay(grid, mode, bounds) {
   const canvas = document.createElement("canvas");
   canvas.width = grid.cols;
   canvas.height = grid.rows;
@@ -36,8 +40,7 @@ function makeRasterOverlay(grid, mode) {
     }
   }
   context.putImageData(pixels, 0, 0);
-  const [west, south, east, north] = grid.bounds;
-  return L.imageOverlay(canvas.toDataURL(), [[south, west], [north, east]]);
+  return L.imageOverlay(canvas.toDataURL(), bounds);
 }
 
 function setLayerControl(name, toggleId, opacityId) {
@@ -61,29 +64,41 @@ function setLayerOpacity(layer, value) {
 }
 
 async function loadPlanner() {
-  const [stats, grid, route] = await Promise.all([
+  const [stats, grid] = await Promise.all([
     fetch(`${DATA_ROOT}stats.json`).then((response) => response.json()),
     fetch(`${DATA_ROOT}grid.json`).then((response) => response.json()),
-    fetch(`${DATA_ROOT}route.geojson`).then((response) => response.json()),
   ]);
-  const [west, south, east, north] = grid.bounds;
-  window.map = L.map("map", { zoomControl: false, attributionControl: false });
+  window.grid = grid;
+  const bounds = [[0, 0], [grid.rows, grid.cols]];
+  window.map = L.map("map", {
+    crs: L.CRS.Simple,
+    zoomControl: false,
+    attributionControl: false,
+  });
   L.control.zoom({ position: "bottomright" }).addTo(window.map);
-  const overlayBounds = [[south, west], [north, east]];
-  console.info("Raster bounds [west, south, east, north]:", grid.bounds);
-  console.info("Leaflet overlay bounds [[south, west], [north, east]]:", overlayBounds);
-  console.info("Route endpoints (lon, lat):", route.features[0].geometry.coordinates[0],
-    route.features[0].geometry.coordinates.at(-1));
-  window.map.fitBounds(overlayBounds, { padding: [24, 24] });
+  const minZoom = window.map.getBoundsZoom(bounds);
+  window.map.setMinZoom(minZoom);
+  console.info("Grid bounds:", bounds);
+  console.info("Route endpoints (row, col):", grid.route_pixels[0],
+    grid.route_pixels.at(-1));
+  window.map.fitBounds(bounds, { padding: [24, 24] });
 
-  layers.slope = makeRasterOverlay(grid, "slope").addTo(window.map);
-  layers.hazard = makeRasterOverlay(grid, "hazard").addTo(window.map);
-  layers.route = L.geoJSON(route, {
-    style: { color: "#68e1fd", weight: 5, opacity: 1 },
-  }).addTo(window.map);
+  layers.slope = makeRasterOverlay(grid, "slope", bounds).addTo(window.map);
+  layers.hazard = makeRasterOverlay(grid, "hazard", bounds).addTo(window.map);
+  const outboundPixels = grid.route_segments.slice(0, -1).flatMap((segment, index) =>
+    index === 0 ? segment : segment.slice(1));
+  const returnPixels = grid.route_segments.at(-1);
+  layers.route = L.layerGroup([
+    L.polyline(outboundPixels.map(gridToLeaflet), {
+      color: "#68e1fd", weight: 5, opacity: 1,
+    }),
+    L.polyline(returnPixels.map(gridToLeaflet), {
+      color: "#fbbf24", weight: 4, opacity: 1, dashArray: "8 8",
+    }),
+  ]).addTo(window.map);
   layers.targets = L.layerGroup();
   grid.targets.forEach((target) => {
-    const marker = L.circleMarker([target.lat, target.lon], {
+    const marker = L.circleMarker(gridToLeaflet([target.row, target.col]), {
       radius: 8, color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 1,
     });
     const label = `Target ${target.id.split("-")[1]}`;
@@ -91,7 +106,7 @@ async function loadPlanner() {
     marker.bindPopup(`<strong>${label}</strong><div class="photo-slot">PLACEHOLDER PHOTO<br>surface preview</div>`);
     marker.addTo(layers.targets);
   });
-  L.circleMarker([grid.habitat.lat, grid.habitat.lon], {
+  L.circleMarker(gridToLeaflet([grid.habitat.row, grid.habitat.col]), {
     radius: 7, color: "#fff", fillColor: "#68e1fd", fillOpacity: 1,
   }).bindTooltip("Habitat").bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(layers.targets);
   layers.targets.addTo(window.map);

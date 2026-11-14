@@ -20,6 +20,7 @@
 - Leaflet demo with slope/hazard, route, target layers, opacity controls, and
   safety stats
 - Steep placeholder ridge with visible red hazard cells and route detour
+- Web map aligned on one row/column grid with padded fit and distinct return leg
 - Setup steps documented in README
 
 ## In progress
