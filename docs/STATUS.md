@@ -12,15 +12,18 @@
 - README explains how to run it in under 5 steps
 
 ## Done
-- Added configurable placeholder AOI bounds and labeled EVA planning assumptions.
-- Added a synthetic placeholder DEM generator and documented setup steps.
+- Placeholder AOI bounds and labeled EVA assumptions in scripts/config.py
+- Synthetic placeholder DEM generator (data/processed/dem.tif is NOT real NASA data)
+- Slope and binary hazard rasters generated from the placeholder DEM
+- Setup steps documented in README
 
 ## In progress
-Placeholder-data setup is complete; the slope/route pipeline and web planner
-are not implemented yet.
+(nothing)
+
+## Blocked on me
+- Real DEM clip and imagery for the AOI (not downloaded yet)
 
 ## Next
-1. scripts/slope.py
-2. scripts/route.py
-3. web/ Leaflet app
-4. Safety sidebar, photos
+1. scripts/route.py
+2. web/ Leaflet app
+3. Safety sidebar, photos

@@ -5,6 +5,13 @@ selected. They must not be presented as measured mission data.
 """
 
 import math
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
+DEM_PATH = PROCESSED_DATA_DIR / "dem.tif"
+SLOPE_PATH = PROCESSED_DATA_DIR / "slope.tif"
+HAZARD_PATH = PROCESSED_DATA_DIR / "hazard.tif"
 
 MARS_RADIUS_KM = 3389.5
 KM_PER_DEG = 2 * math.pi * MARS_RADIUS_KM / 360
