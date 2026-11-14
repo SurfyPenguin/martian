@@ -1,18 +1,23 @@
-"""Generate a small, clearly labeled DEM for local pipeline development."""
+"""Generate the legacy synthetic DEM only when explicitly requested."""
 
+import argparse
 from pathlib import Path
 
 import numpy as np
 import rasterio
 from rasterio.transform import from_bounds
 
-from config import AOI_BOUNDS
-
-
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = ROOT / "data" / "processed" / "dem.tif"
 ROWS = 64
 COLS = 64
+# PLACEHOLDER bounds retained only for the explicit demo fallback.
+PLACEHOLDER_BOUNDS = {
+    "min_lon": 137.64,
+    "min_lat": -4.684,
+    "max_lon": 137.68,
+    "max_lat": -4.60,
+}
 
 
 def make_dem() -> np.ndarray:
@@ -34,7 +39,7 @@ def make_dem() -> np.ndarray:
 
 def main() -> None:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    bounds = AOI_BOUNDS
+    bounds = PLACEHOLDER_BOUNDS
     transform = from_bounds(
         bounds["min_lon"],
         bounds["min_lat"],
@@ -71,4 +76,13 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--placeholder",
+        action="store_true",
+        help=" opt into generating the legacy synthetic DEM",
+    )
+    args = parser.parse_args()
+    if not args.placeholder:
+        parser.error("synthetic generation is disabled; pass --placeholder explicitly")
     main()

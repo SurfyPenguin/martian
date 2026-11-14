@@ -1,5 +1,6 @@
-"""Plan a low-slope EVA route over the processed placeholder rasters."""
+"""Plan a low-risk EVA route over one real site's processed rasters."""
 
+import argparse
 import heapq
 import json
 import math
@@ -7,49 +8,19 @@ import math
 import numpy as np
 import rasterio
 
-if __package__:
-    from .config import (
-        DEM_PATH,
-        EVA_HOURS,
-        GRID_PATH,
-        HABITAT_PIXEL,
-        HAZARD_PATH,
-        MAX_WALKABLE_SLOPE_DEG,
-        ROUTE_PATH,
-        SCIENCE_TARGET_PIXELS,
-        SLOPE_PATH,
-        STATS_PATH,
-        WALKING_SPEED_KMH,
-        DOSE_RATE_MSV_PER_HOUR,
-        SLOPE_COST_POWER,
-        AOI_BOUNDS,
-        CENTER_LAT,
-        CENTER_LON,
-    )
-    from .slope import cell_size_meters
-else:
-    from config import (
-        DEM_PATH,
-        EVA_HOURS,
-        GRID_PATH,
-        HABITAT_PIXEL,
-        HAZARD_PATH,
-        MAX_WALKABLE_SLOPE_DEG,
-        ROUTE_PATH,
-        SCIENCE_TARGET_PIXELS,
-        SLOPE_PATH,
-        STATS_PATH,
-        WALKING_SPEED_KMH,
-        DOSE_RATE_MSV_PER_HOUR,
-        SLOPE_COST_POWER,
-        AOI_BOUNDS,
-        CENTER_LAT,
-        CENTER_LON,
-    )
-    from slope import cell_size_meters
-
-
-PLACEHOLDER_STATUS = "PLACEHOLDER - route derived from synthetic DEM"
+from config import (
+    DOSE_RATE_MSV_PER_HOUR,
+    EVA_HOURS,
+    MAX_ROUGHNESS_M,
+    MAX_WALKABLE_SLOPE_DEG,
+    ROUGHNESS_COST_WEIGHT,
+    SLOPE_COST_POWER,
+    WALKING_SPEED_KMH,
+    SITES,
+    site_config,
+    site_output_dir,
+)
+from slope import cell_size_meters
 
 
 def neighbours(row: int, col: int, rows: int, cols: int):
@@ -67,23 +38,23 @@ def astar(
     start: tuple[int, int],
     goal: tuple[int, int],
     walkable: np.ndarray,
-    slope_deg: np.ndarray,
+    slope: np.ndarray,
+    roughness: np.ndarray,
     x_size_m: float,
     y_size_m: float,
 ) -> list[tuple[int, int]]:
-    """Return an 8-neighbor route or raise when no safe route exists."""
     if not walkable[start] or not walkable[goal]:
         raise ValueError(f"Route endpoint is not walkable: {start} -> {goal}")
 
     def heuristic(cell: tuple[int, int]) -> float:
-        row_delta = (cell[0] - goal[0]) * y_size_m
-        col_delta = (cell[1] - goal[1]) * x_size_m
-        return math.hypot(row_delta, col_delta)
+        return math.hypot(
+            (cell[0] - goal[0]) * y_size_m,
+            (cell[1] - goal[1]) * x_size_m,
+        )
 
     queue = [(heuristic(start), 0.0, start)]
     came_from: dict[tuple[int, int], tuple[int, int]] = {}
     cost_so_far = {start: 0.0}
-
     while queue:
         _, current_cost, current = heapq.heappop(queue)
         if current == goal:
@@ -94,154 +65,197 @@ def astar(
             return list(reversed(path))
         if current_cost > cost_so_far[current]:
             continue
-
         for next_cell in neighbours(*current, *walkable.shape):
             if not walkable[next_cell]:
                 continue
-            row_step = (next_cell[0] - current[0]) * y_size_m
-            col_step = (next_cell[1] - current[1]) * x_size_m
-            distance_m = math.hypot(row_step, col_step)
-            normalized_slope = float(slope_deg[next_cell]) / MAX_WALKABLE_SLOPE_DEG
-            terrain_factor = 1.0 + normalized_slope**SLOPE_COST_POWER
-            next_cost = current_cost + distance_m * terrain_factor
+            distance_m = math.hypot(
+                (next_cell[0] - current[0]) * y_size_m,
+                (next_cell[1] - current[1]) * x_size_m,
+            )
+            slope_factor = (
+                float(slope[next_cell]) / MAX_WALKABLE_SLOPE_DEG
+            ) ** SLOPE_COST_POWER
+            roughness_factor = (
+                float(roughness[next_cell]) / MAX_ROUGHNESS_M
+            ) * ROUGHNESS_COST_WEIGHT
+            next_cost = current_cost + distance_m * (
+                1.0 + slope_factor + roughness_factor
+            )
             if next_cost < cost_so_far.get(next_cell, math.inf):
                 cost_so_far[next_cell] = next_cost
                 came_from[next_cell] = current
                 heapq.heappush(
                     queue, (next_cost + heuristic(next_cell), next_cost, next_cell)
                 )
-
     raise ValueError(f"No walkable route exists: {start} -> {goal}")
 
 
-def main() -> None:
-    with rasterio.open(DEM_PATH) as dem_source, rasterio.open(
-        HAZARD_PATH
-    ) as hazard_source:
-        elevation_m = dem_source.read(1)
-        with rasterio.open(SLOPE_PATH) as slope_source:
-            slope_deg = slope_source.read(1)
-        hazard = hazard_source.read(1)
-        walkable = (hazard == 0) & np.isfinite(slope_deg)
-        x_size_m, y_size_m = cell_size_meters(dem_source)
-        rows, cols = walkable.shape
+def latlon_to_pixel(
+    point: dict, bounds: dict, rows: int, cols: int
+) -> tuple[int, int]:
+    row = round((bounds["max_lat"] - point["lat"])
+                / (bounds["max_lat"] - bounds["min_lat"]) * (rows - 1))
+    col = round((point["lon"] - bounds["min_lon"])
+                / (bounds["max_lon"] - bounds["min_lon"]) * (cols - 1))
+    if not (0 <= row < rows and 0 <= col < cols):
+        raise ValueError(f"Coordinate is outside the configured DEM bounds: {point}")
+    return row, col
 
-    low_proxy, high_proxy = np.quantile(elevation_m, [1 / 3, 2 / 3])
-    mineral_proxy = np.where(
-        elevation_m <= low_proxy, 1, np.where(elevation_m >= high_proxy, 2, 3)
+
+def pixel_to_latlon(pixel: tuple[int, int], bounds: dict, rows: int, cols: int):
+    row, col = pixel
+    return {
+        "lat": bounds["max_lat"] - row / max(1, rows - 1)
+        * (bounds["max_lat"] - bounds["min_lat"]),
+        "lon": bounds["min_lon"] + col / max(1, cols - 1)
+        * (bounds["max_lon"] - bounds["min_lon"]),
+    }
+
+
+def route_distance_km(route: list[tuple[int, int]], x_size_m: float, y_size_m: float):
+    return sum(
+        math.hypot(
+            (route[index + 1][0] - route[index][0]) * y_size_m,
+            (route[index + 1][1] - route[index][1]) * x_size_m,
+        )
+        for index in range(len(route) - 1)
+    ) / 1000
+
+
+def process_site(site: str) -> None:
+    config = site_config(site)
+    output = site_output_dir(site)
+    dem_path = config["dem_path"]
+    with rasterio.open(dem_path) as dem_source:
+        rows, cols = dem_source.height, dem_source.width
+        x_size_m, y_size_m = cell_size_meters(dem_source)
+        dem_bounds = dem_source.bounds
+    with rasterio.open(output / "slope.tif") as source:
+        slope = source.read(1)
+    with rasterio.open(output / "roughness.tif") as source:
+        roughness = source.read(1)
+    with rasterio.open(output / "hazard.tif") as source:
+        hazard = source.read(1)
+
+    slope_valid = np.isfinite(slope) & (slope != -9999)
+    roughness_valid = np.isfinite(roughness) & (roughness != -9999)
+    walkable = (
+        slope_valid
+        & roughness_valid
+        & (slope <= MAX_WALKABLE_SLOPE_DEG)
+        & (roughness <= MAX_ROUGHNESS_M)
+    )
+    valid_cells = slope_valid.sum()
+    above_slope = slope_valid & (slope > MAX_WALKABLE_SLOPE_DEG)
+    print(
+        f"{site}: cell size x={x_size_m:.3f} m, y={y_size_m:.3f} m; "
+        f"slope>{MAX_WALKABLE_SLOPE_DEG:g}° in "
+        f"{100 * above_slope.sum() / valid_cells:.2f}% of valid slope cells"
     )
 
-    points = [HABITAT_PIXEL, *SCIENCE_TARGET_PIXELS, HABITAT_PIXEL]
-    route_segments: list[list[tuple[int, int]]] = []
-    for start, goal in zip(points, points[1:]):
-        segment = astar(start, goal, walkable, slope_deg, x_size_m, y_size_m)
-        route_segments.append(segment)
+    bounds = config["bounds"]
+    points = [config["habitat"], *config["targets"], config["habitat"]]
+    pixels = [latlon_to_pixel(point, bounds, rows, cols) for point in points]
+    route_segments = []
+    try:
+        for start, goal in zip(pixels, pixels[1:]):
+            route_segments.append(
+                astar(start, goal, walkable, slope, roughness, x_size_m, y_size_m)
+            )
+    except ValueError as error:
+        raise RuntimeError(
+            f"{site} has no valid route with the configured assumptions: {error}. "
+            f"Move the placeholder habitat or targets; do not relax thresholds."
+        ) from error
+
     route_pixels = route_segments[0][:]
     for segment in route_segments[1:]:
         route_pixels.extend(segment[1:])
-    distance_km = sum(
-        math.hypot(
-            (route_pixels[index + 1][0] - route_pixels[index][0]) * y_size_m,
-            (route_pixels[index + 1][1] - route_pixels[index][1]) * x_size_m,
-        )
-        for index in range(len(route_pixels) - 1)
-    ) / 1000
+    distance_km = route_distance_km(route_pixels, x_size_m, y_size_m)
     time_h = distance_km / WALKING_SPEED_KMH
     if time_h > EVA_HOURS:
-        raise ValueError(f"Route requires {time_h:.2f} h, over EVA limit {EVA_HOURS:.2f} h")
-
-    targets = [
-        {"id": f"target-{index + 1}", "row": row, "col": col}
-        for index, (row, col) in enumerate(SCIENCE_TARGET_PIXELS)
-    ]
-    leg_stats = []
-    for index, segment in enumerate(route_segments):
-        segment_distance_km = sum(
-            math.hypot(
-                (segment[step + 1][0] - segment[step][0]) * y_size_m,
-                (segment[step + 1][1] - segment[step][1]) * x_size_m,
-            )
-            for step in range(len(segment) - 1)
-        ) / 1000
-        leg_stats.append(
-            {
-                "name": "return" if index == len(route_segments) - 1 else f"target-{index + 1}",
-                "distance_km": round(segment_distance_km, 3),
-                "time_h": round(segment_distance_km / WALKING_SPEED_KMH, 3),
-            }
+        raise RuntimeError(
+            f"{site} route requires {time_h:.2f} h, over the {EVA_HOURS:.2f} h "
+            "EVA assumption; move the placeholder habitat or targets."
         )
+
+    legs = []
+    for index, segment in enumerate(route_segments):
+        distance = route_distance_km(segment, x_size_m, y_size_m)
+        legs.append({
+            "name": "return" if index == len(route_segments) - 1 else f"target-{index + 1}",
+            "distance_km": round(distance, 3),
+            "time_h": round(distance / WALKING_SPEED_KMH, 3),
+        })
     stats = {
-        "data_status": PLACEHOLDER_STATUS,
+        "data_status": "REAL - route derived from supplied NASA DEM",
         "distance_km": round(distance_km, 3),
         "time_h": round(time_h, 3),
         "return_margin_h": round(EVA_HOURS - time_h, 3),
         "est_dose_msv": round(time_h * DOSE_RATE_MSV_PER_HOUR, 4),
         "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
+        "max_roughness_m": MAX_ROUGHNESS_M,
+        "slope_over_limit_fraction": round(float(above_slope.sum() / valid_cells), 6),
+        "cell_size_m": {"x": round(x_size_m, 3), "y": round(y_size_m, 3)},
     }
     grid = {
-        "data_status": PLACEHOLDER_STATUS,
+        "data_status": "REAL - supplied NASA DEM and CTX imagery",
+        "site": site,
+        "site_name": config["name"],
         "rows": rows,
         "cols": cols,
-        "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
+        "grid_bounds": [[0, 0], [rows, cols]],
+        "geo_reference": {"status": "REAL DEM bounds", "bounds": bounds},
         "cell_size_m": {"x": x_size_m, "y": y_size_m},
-        "geo_reference": {
-            "status": "PLACEHOLDER - interpolated from config.py AOI",
-            "center_lat": CENTER_LAT,
-            "center_lon": CENTER_LON,
-            "bounds": AOI_BOUNDS,
-        },
-        "elevation_m": np.round(elevation_m, 2).tolist(),
-        "mineral_proxy_status": (
-            "PLACEHOLDER - synthetic terrain zones, not mineral identifications"
-        ),
-        "mineral_proxy_classes": {
-            "1": "Proxy zone A",
-            "2": "Proxy zone B",
-            "3": "Proxy zone C",
-        },
-        "mineral_proxy": mineral_proxy.tolist(),
-        "slope_deg": np.round(slope_deg, 3).tolist(),
-        "walkable": walkable.tolist(),
+        "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
+        "max_roughness_m": MAX_ROUGHNESS_M,
         "route_pixels": route_pixels,
         "route_segments": route_segments,
-        "targets": targets,
-        "legs": leg_stats,
-        "habitat": {"row": HABITAT_PIXEL[0], "col": HABITAT_PIXEL[1]},
-    }
-    geojson = {
-        "type": "FeatureCollection",
-        "properties": {
-            "data_status": PLACEHOLDER_STATUS,
-            "coordinate_system": "grid row,col",
+        "targets": [
+            {"id": f"target-{index + 1}", "row": row, "col": col,
+             "lat": point["lat"], "lon": point["lon"]}
+            for index, (point, (row, col)) in enumerate(zip(config["targets"], pixels[1:-1]))
+        ],
+        "legs": legs,
+        "habitat": {
+            "row": pixels[0][0], "col": pixels[0][1],
+            "lat": config["habitat"]["lat"], "lon": config["habitat"]["lon"],
         },
-        "features": [],
+        "coordinate_status": "PLACEHOLDER - replace habitat and target coordinates",
+        "layer_paths": {
+            "elevation": f"data/processed/{site}/elevation.png",
+            "imagery": f"data/processed/{site}/imagery.png",
+            "slope": f"data/processed/{site}/slope.png",
+            "hazard": f"data/processed/{site}/hazard.png",
+        },
     }
+    (output / "stats.json").write_text(json.dumps(stats, indent=2) + "\n")
+    (output / "grid.json").write_text(json.dumps(grid) + "\n")
     outbound = route_segments[:-1]
     outbound_pixels = outbound[0][:]
     for segment in outbound[1:]:
         outbound_pixels.extend(segment[1:])
-    for leg_name, pixels in (("outbound", outbound_pixels), ("return", route_segments[-1])):
-        geojson["features"].append(
-            {
-                "type": "Feature",
-                "properties": {
-                    "data_status": PLACEHOLDER_STATUS,
-                    "leg": leg_name,
-                    "coordinate_system": "grid row,col",
-                },
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": [list(pixel) for pixel in pixels],
-                },
-            }
-        )
-    ROUTE_PATH.write_text(json.dumps(geojson, indent=2))
-    STATS_PATH.write_text(json.dumps(stats, indent=2) + "\n")
-    GRID_PATH.write_text(json.dumps(grid) + "\n")
-    print(
-        f"Route placeholder: {distance_km:.3f} km, {time_h:.3f} h, "
-        f"return margin {EVA_HOURS - time_h:.3f} h, dose {stats['est_dose_msv']:.4f} mSv"
-    )
+    features = []
+    for name, pixels_for_leg in (("outbound", outbound_pixels), ("return", route_segments[-1])):
+        features.append({
+            "type": "Feature",
+            "properties": {"data_status": "REAL - derived from supplied NASA DEM", "leg": name},
+            "geometry": {"type": "LineString", "coordinates": [list(p) for p in pixels_for_leg]},
+        })
+    (output / "route.geojson").write_text(json.dumps({
+        "type": "FeatureCollection",
+        "properties": {"data_status": "REAL - derived from supplied NASA DEM",
+                       "coordinate_system": "grid row,col"},
+        "features": features,
+    }, indent=2) + "\n")
+    print(f"{site}: route {distance_km:.3f} km, {time_h:.3f} h")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--site", choices=sorted(SITES), required=True)
+    args = parser.parse_args()
+    process_site(args.site)
 
 
 if __name__ == "__main__":

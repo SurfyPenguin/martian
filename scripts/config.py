@@ -1,52 +1,79 @@
-"""Central settings for the MarsWalk processing scripts.
-
-The area values below are placeholders until a real NASA data footprint is
-selected. They must not be presented as measured mission data.
-"""
+"""Site configuration and adjustable EVA assumptions."""
 
 import math
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
-DEM_PATH = PROCESSED_DATA_DIR / "dem.tif"
-SLOPE_PATH = PROCESSED_DATA_DIR / "slope.tif"
-HAZARD_PATH = PROCESSED_DATA_DIR / "hazard.tif"
-ROUTE_PATH = PROCESSED_DATA_DIR / "route.geojson"
-STATS_PATH = PROCESSED_DATA_DIR / "stats.json"
-GRID_PATH = PROCESSED_DATA_DIR / "grid.json"
+MARS_RADIUS_M = 3_389_500.0
+KM_PER_DEG = 2 * math.pi * MARS_RADIUS_M / 360_000
 
-MARS_RADIUS_KM = 3389.5
-KM_PER_DEG = 2 * math.pi * MARS_RADIUS_KM / 360
-
-# PLACEHOLDER AOI: replace with bounds from the selected NASA data footprint.
-CENTER_LAT = -4.64173
-CENTER_LON = 137.66
-HALF_SIDE_KM = 2.5
-
-dlat = HALF_SIDE_KM / KM_PER_DEG
-dlon = HALF_SIDE_KM / (KM_PER_DEG * math.cos(math.radians(CENTER_LAT)))
-
-# PLACEHOLDER AOI bounds, derived from the placeholder center and size above.
-AOI_BOUNDS = {
-    "min_lat": CENTER_LAT - dlat,
-    "max_lat": CENTER_LAT + dlat,
-    "min_lon": CENTER_LON - dlon,
-    "max_lon": CENTER_LON + dlon,
+SITES = {
+    "site1": {
+        "name": "Gale crater floor",
+        "dem_path": PROCESSED_DATA_DIR / "site1_dem.tif",
+        "imagery_path": PROCESSED_DATA_DIR / "site1_imagery.tif",
+        "bounds": {
+            "min_lon": 137.38372932,
+            "min_lat": -4.62945782,
+            "max_lon": 137.46856732,
+            "max_lat": -4.54495782,
+        },
+        # PLACEHOLDER coordinates: replace with mission-provided points.
+        "habitat": {"lat": -4.58720782, "lon": 137.42614832},
+        # PLACEHOLDER coordinates: replace with mission-provided science targets.
+        "targets": [
+            {"lat": -4.57420782, "lon": 137.40714832},
+            {"lat": -4.60820782, "lon": 137.44714832},
+            {"lat": -4.56520782, "lon": 137.45614832},
+        ],
+    },
+    "site2": {
+        "name": "Southern box",
+        "dem_path": PROCESSED_DATA_DIR / "site2_dem.tif",
+        "imagery_path": PROCESSED_DATA_DIR / "site2_imagery.tif",
+        "bounds": {
+            "min_lon": 137.35759675,
+            "min_lat": -4.84236515,
+            "max_lon": 137.44243475,
+            "max_lat": -4.75769615,
+        },
+        # PLACEHOLDER coordinates: replace with mission-provided points.
+        "habitat": {"lat": -4.80206271, "lon": 137.40721259},
+        # PLACEHOLDER coordinates: replace with mission-provided science targets.
+        "targets": [
+            {"lat": -4.80511079, "lon": 137.41517144},
+            {"lat": -4.80172403, "lon": 137.41686481},
+            {"lat": -4.79495051, "lon": 137.41347807},
+        ],
+    },
 }
-
-# PLACEHOLDER mission points in (row, column) raster pixels.
-HABITAT_PIXEL = (32, 6)
-SCIENCE_TARGET_PIXELS = ((16, 24), (42, 42), (30, 55))
 
 # ASSUMPTION: maximum slope considered walkable by a suited astronaut.
 MAX_WALKABLE_SLOPE_DEG = 15.0
+# ASSUMPTION: local 5x5 elevation standard deviation above this value is
+# considered too rough for the planned EVA.
+MAX_ROUGHNESS_M = 15.0
 # ASSUMPTION: average walking speed for a suited astronaut.
 WALKING_SPEED_KMH = 3.0
 # ASSUMPTION: planned maximum EVA duration before return.
 EVA_HOURS = 4.0
 # ASSUMPTION: estimated radiation dose rate used for planning displays.
 DOSE_RATE_MSV_PER_HOUR = 0.02
-# ROUTE SETTING: emphasize steeper cells while keeping the route within the
-# configured EVA time limit.
+# ROUTE SETTING: weight slope and roughness while preferring shorter paths.
 SLOPE_COST_POWER = 1.0
+ROUGHNESS_COST_WEIGHT = 0.05
+
+
+def site_config(site: str) -> dict:
+    try:
+        return SITES[site]
+    except KeyError as error:
+        choices = ", ".join(SITES)
+        raise ValueError(f"Unknown site {site!r}; choose one of: {choices}") from error
+
+
+def site_output_dir(site: str) -> Path:
+    output = PROCESSED_DATA_DIR / site
+    output.mkdir(parents=True, exist_ok=True)
+    return output

@@ -1,0 +1,14 @@
+{
+  "data_status": "REAL - route derived from supplied NASA DEM",
+  "distance_km": 9.738,
+  "time_h": 3.246,
+  "return_margin_h": 0.754,
+  "est_dose_msv": 0.0649,
+  "max_walkable_slope_deg": 15.0,
+  "max_roughness_m": 15.0,
+  "slope_over_limit_fraction": 0.001833,
+  "cell_size_m": {
+    "x": 9.966,
+    "y": 9.998
+  }
+}
