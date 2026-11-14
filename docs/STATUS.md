@@ -14,7 +14,8 @@
 ## Done
 - Placeholder AOI bounds and labeled EVA assumptions in scripts/config.py
 - Synthetic placeholder DEM generator (data/processed/dem.tif is NOT real NASA data)
-- Slope and binary hazard rasters generated from the placeholder DEM
+- Slope and binary hazard rasters generated from the placeholder DEM with
+  nodata-safe edge handling
 - Setup steps documented in README
 
 ## In progress
