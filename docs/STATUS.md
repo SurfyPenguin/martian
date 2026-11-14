@@ -38,6 +38,7 @@
   legend, and inspector zone values; no mineral identifications are claimed
 - Increased synthetic terrain variance with rolling hills, crater-like
   depression, terrace, fine texture, and an elevation-balanced proxy map
+- Slimmed outbound and return route strokes for a lighter map overlay
 - Setup steps documented in README
 
 ## In progress

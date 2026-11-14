@@ -260,19 +260,19 @@ async function loadPlanner() {
   const returnPath = returnPixels.map(gridToLeaflet);
   layers.route = L.layerGroup([
     L.polyline(outboundPath, {
-      color: "#080d16", weight: 10, opacity: .9, lineCap: "round", lineJoin: "round",
+      color: "#080d16", weight: 7, opacity: .9, lineCap: "round", lineJoin: "round",
       pane: "route-pane",
     }),
     L.polyline(outboundPath, {
-      color: "#fbbf24", weight: 5, opacity: 1, dashArray: "10 8",
+      color: "#fbbf24", weight: 3, opacity: 1, dashArray: "10 8",
       lineCap: "round", lineJoin: "round", pane: "route-pane",
     }).bindTooltip("Outbound leg · Habitat → science targets"),
     L.polyline(returnPath, {
-      color: "#080d16", weight: 12, opacity: .9, lineCap: "round", lineJoin: "round",
+      color: "#080d16", weight: 8, opacity: .9, lineCap: "round", lineJoin: "round",
       pane: "route-pane",
     }),
     L.polyline(returnPath, {
-      color: "#68e1fd", weight: 6, opacity: 1,
+      color: "#68e1fd", weight: 4, opacity: 1,
       lineCap: "round", lineJoin: "round", pane: "route-pane",
     }).bindTooltip("Return leg · Target 3 → Habitat"),
   ]).addTo(window.map);
