@@ -1,13 +1,14 @@
 # Status (update after every task)
 
 ## Scope (MVP, solo, ~1 day)
-- Area: ~5x5 km near Mount Sharp boxwork region, Gale Crater
-- 4 layers: imagery, slope hazard map, CRISM/geologic map, radiation + weather panel
-- 1 route between 2-3 science targets via A*
-- 2-3 Mastcam photos for destination preview
+- Two supplied, clipped sites in Gale Crater: Gale crater floor and Southern box
+- CTX imagery, elevation, slope/roughness hazard, route, and target layers
+- One route between three placeholder science targets per site via A*
+- Assumption-based dose and EVA safety summary
 
 ## Definition of done
-- `python scripts/slope.py && python scripts/route.py` produces data/processed/route.geojson
+- `python scripts/slope.py --site <site>` and `python scripts/route.py --site <site>`
+  produce per-site outputs
 - Opening web/index.html shows layer toggles, route, and safety sidebar
 - README explains how to run it in under 5 steps
 
@@ -56,6 +57,11 @@
   stops that fly the map to the selected coordinate
 - Replaced zoom presets with an inline zoom percentage slider
 - Improved terrain inspector hierarchy and kept it clear of map zoom controls
+- Added Pillow to the documented dependencies and focused real-pipeline tests
+- Made slope calculation explicitly NoData-safe without filling invalid elevations
+- Reprojected CTX imagery onto each DEM transform before browser export
+- Added provenance caveats, aligned the current project plan, and added a favicon
+- Renamed slope variables to `slope_deg` and clarified the slope/roughness legend
 
 ## In progress
 (nothing)
@@ -66,5 +72,5 @@
 
 ## Next
 1. Replace placeholder habitat and target coordinates with mission points
-2. Add destination photos and validate imagery provenance
-3. Add weather/radiation data sources and validation
+2. Add destination photos if their provenance is available
+3. Add validated science or environmental sources before presenting them as layers

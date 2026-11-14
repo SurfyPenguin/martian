@@ -1,6 +1,6 @@
 # Real input data schema
 
-These files are the clipped real inputs used by the site pipeline. The site coordinates in `scripts/config.py` remain explicitly labeled placeholders until mission points are supplied.
+These files are the clipped real inputs used by the site pipeline. The site coordinates in `scripts/config.py` remain explicitly labeled placeholders until mission points are supplied. The supplied files are identified as NASA-provided inputs, but product IDs and acquisition dates were not included.
 
 | File | Shape | Bands | Dtype | CRS | NoData | Bounds (left, bottom, right, top) | Resolution (x, y) | Size |
 |---|---:|---:|---|---|---:|---|---|---:|

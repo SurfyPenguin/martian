@@ -1,16 +1,18 @@
 """Site configuration and adjustable EVA assumptions."""
 
-import math
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 MARS_RADIUS_M = 3_389_500.0
-KM_PER_DEG = 2 * math.pi * MARS_RADIUS_M / 360_000
 
 SITES = {
     "site1": {
         "name": "Gale crater floor",
+        "provenance": (
+            "NASA-provided clipped DEM and CTX input; product ID and acquisition "
+            "date were not supplied."
+        ),
         "dem_path": PROCESSED_DATA_DIR / "site1_dem.tif",
         "imagery_path": PROCESSED_DATA_DIR / "site1_imagery.tif",
         "bounds": {
@@ -30,6 +32,10 @@ SITES = {
     },
     "site2": {
         "name": "Southern box",
+        "provenance": (
+            "NASA-provided clipped DEM and CTX input; product ID and acquisition "
+            "date were not supplied."
+        ),
         "dem_path": PROCESSED_DATA_DIR / "site2_dem.tif",
         "imagery_path": PROCESSED_DATA_DIR / "site2_imagery.tif",
         "bounds": {

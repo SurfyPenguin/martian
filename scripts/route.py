@@ -129,24 +129,23 @@ def process_site(site: str) -> None:
     with rasterio.open(dem_path) as dem_source:
         rows, cols = dem_source.height, dem_source.width
         x_size_m, y_size_m = cell_size_meters(dem_source)
-        dem_bounds = dem_source.bounds
     with rasterio.open(output / "slope.tif") as source:
-        slope = source.read(1)
+        slope_deg = source.read(1)
     with rasterio.open(output / "roughness.tif") as source:
         roughness = source.read(1)
     with rasterio.open(output / "hazard.tif") as source:
         hazard = source.read(1)
 
-    slope_valid = np.isfinite(slope) & (slope != -9999)
+    slope_valid = np.isfinite(slope_deg) & (slope_deg != -9999)
     roughness_valid = np.isfinite(roughness) & (roughness != -9999)
     walkable = (
         slope_valid
         & roughness_valid
-        & (slope <= MAX_WALKABLE_SLOPE_DEG)
+        & (slope_deg <= MAX_WALKABLE_SLOPE_DEG)
         & (roughness <= MAX_ROUGHNESS_M)
     )
     valid_cells = slope_valid.sum()
-    above_slope = slope_valid & (slope > MAX_WALKABLE_SLOPE_DEG)
+    above_slope = slope_valid & (slope_deg > MAX_WALKABLE_SLOPE_DEG)
     print(
         f"{site}: cell size x={x_size_m:.3f} m, y={y_size_m:.3f} m; "
         f"slope>{MAX_WALKABLE_SLOPE_DEG:g}° in "
@@ -160,7 +159,7 @@ def process_site(site: str) -> None:
     try:
         for start, goal in zip(pixels, pixels[1:]):
             route_segments.append(
-                astar(start, goal, walkable, slope, roughness, x_size_m, y_size_m)
+                astar(start, goal, walkable, slope_deg, roughness, x_size_m, y_size_m)
             )
     except ValueError as error:
         raise RuntimeError(

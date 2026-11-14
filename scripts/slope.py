@@ -8,6 +8,7 @@ import numpy as np
 import rasterio
 from PIL import Image
 from numpy.lib.stride_tricks import sliding_window_view
+from rasterio.warp import reproject
 
 from config import (
     MARS_RADIUS_M,
@@ -32,33 +33,49 @@ def cell_size_meters(source: rasterio.DatasetReader) -> tuple[float, float]:
     )
 
 
-def read_dem(path: Path) -> tuple[np.ndarray, np.ndarray, float]:
-    with rasterio.open(path) as source:
-        dem = source.read(1).astype("float32")
-        nodata = source.nodata
-        valid = np.isfinite(dem)
-        if nodata is not None:
-            valid &= dem != nodata
-        return dem, valid, nodata
-
-
 def calculate_slope(
     dem: np.ndarray,
     x_size_m: float,
     y_size_m: float,
     valid: np.ndarray,
 ) -> np.ndarray:
-    """Calculate slope only where the four cardinal neighbors are valid."""
-    filled = np.where(valid, dem, 0.0)
-    dz_dy, dz_dx = np.gradient(filled, y_size_m, x_size_m)
-    slope = np.degrees(np.arctan(np.hypot(dz_dx, dz_dy))).astype("float32")
+    """Calculate degree slope without using invalid elevation values."""
+    rows, cols = dem.shape
+    dz_dx = np.full(dem.shape, np.nan, dtype="float64")
+    dz_dy = np.full(dem.shape, np.nan, dtype="float64")
+
+    if cols > 1:
+        forward = valid[:, :-1] & valid[:, 1:]
+        dz_dx[:, :-1][forward] = (
+            (dem[:, 1:] - dem[:, :-1]) / x_size_m
+        )[forward]
+        dz_dx[:, 1:][forward] = dz_dx[:, :-1][forward]
+    if rows > 1:
+        forward = valid[:-1, :] & valid[1:, :]
+        dz_dy[:-1, :][forward] = (
+            (dem[1:, :] - dem[:-1, :]) / y_size_m
+        )[forward]
+        dz_dy[1:, :][forward] = dz_dy[:-1, :][forward]
+
+    if cols > 2:
+        central = valid[:, :-2] & valid[:, 1:-1] & valid[:, 2:]
+        dz_dx[:, 1:-1][central] = (
+            (dem[:, 2:] - dem[:, :-2]) / (2 * x_size_m)
+        )[central]
+    if rows > 2:
+        central = valid[:-2, :] & valid[1:-1, :] & valid[2:, :]
+        dz_dy[1:-1, :][central] = (
+            (dem[2:, :] - dem[:-2, :]) / (2 * y_size_m)
+        )[central]
+
     gradient_valid = valid.copy()
     gradient_valid[:, 1:] &= valid[:, :-1]
     gradient_valid[:, :-1] &= valid[:, 1:]
     gradient_valid[1:, :] &= valid[:-1, :]
     gradient_valid[:-1, :] &= valid[1:, :]
-    slope[~gradient_valid] = np.nan
-    return slope
+    slope_deg = np.degrees(np.arctan(np.hypot(dz_dx, dz_dy))).astype("float32")
+    slope_deg[~gradient_valid] = np.nan
+    return slope_deg
 
 
 def calculate_roughness(dem: np.ndarray, valid: np.ndarray) -> np.ndarray:
@@ -96,13 +113,26 @@ def write_png(path: Path, rgba: np.ndarray) -> None:
     Image.fromarray(rgba, mode="RGBA").save(path)
 
 
-def export_imagery(path: Path, shape: tuple[int, int], output: Path) -> None:
+def export_imagery(
+    path: Path,
+    shape: tuple[int, int],
+    transform,
+    crs,
+    output: Path,
+) -> None:
     with rasterio.open(path) as source:
-        image = source.read(
-            1,
-            out_shape=shape,
+        image = np.full(shape, np.nan, dtype="float32")
+        reproject(
+            source=rasterio.band(source, 1),
+            destination=image,
+            src_transform=source.transform,
+            src_crs=source.crs,
+            src_nodata=source.nodata,
+            dst_transform=transform,
+            dst_crs=crs,
+            dst_nodata=np.nan,
             resampling=rasterio.enums.Resampling.bilinear,
-        ).astype("float32")
+        )
         valid = np.isfinite(image)
     write_png(output, rgba_from_scalar(image, valid))
 
@@ -118,21 +148,22 @@ def process_site(site: str) -> None:
             valid &= dem != nodata
         x_size_m, y_size_m = cell_size_meters(source)
         profile = source.profile.copy()
-        bounds = source.bounds
+        transform = source.transform
+        crs = source.crs
 
     if not np.any(valid):
         raise ValueError(f"{site} DEM contains no valid cells")
-    slope = calculate_slope(dem, x_size_m, y_size_m, valid)
+    slope_deg = calculate_slope(dem, x_size_m, y_size_m, valid)
     roughness = calculate_roughness(dem, valid)
-    slope_valid = np.isfinite(slope)
+    slope_valid = np.isfinite(slope_deg)
     roughness_valid = np.isfinite(roughness)
     hazard = (
         ~slope_valid
         | ~roughness_valid
-        | (slope > MAX_WALKABLE_SLOPE_DEG)
+        | (slope_deg > MAX_WALKABLE_SLOPE_DEG)
         | (roughness > MAX_ROUGHNESS_M)
     )
-    slope_output = np.where(slope_valid, slope, -9999).astype("float32")
+    slope_output = np.where(slope_valid, slope_deg, -9999).astype("float32")
     roughness_output = np.where(roughness_valid, roughness, -9999).astype("float32")
 
     raster_profile = profile.copy()
@@ -142,6 +173,7 @@ def process_site(site: str) -> None:
             target.write(values, 1)
             target.update_tags(
                 DATA_STATUS="REAL - derived from supplied NASA DEM",
+                SOURCE_PROVENANCE=config["provenance"],
                 CELL_SIZE_X_M=f"{x_size_m:.3f}",
                 CELL_SIZE_Y_M=f"{y_size_m:.3f}",
             )
@@ -151,20 +183,27 @@ def process_site(site: str) -> None:
         target.write(np.where(hazard, 1, 0).astype("uint8"), 1)
         target.update_tags(
             DATA_STATUS="REAL - derived from supplied NASA DEM",
+            SOURCE_PROVENANCE=config["provenance"],
             HAZARD_ENCODING="0=walkable, 1=slope_or_roughness_hazard, 255=nodata",
         )
 
     elevation_valid = valid & np.isfinite(dem)
     write_png(output / "elevation.png", rgba_from_scalar(dem, elevation_valid))
-    write_png(output / "slope.png", rgba_from_scalar(slope, slope_valid))
+    write_png(output / "slope.png", rgba_from_scalar(slope_deg, slope_valid))
     hazard_rgba = np.zeros((*hazard.shape, 4), dtype=np.uint8)
     display_hazard = valid & slope_valid & roughness_valid & hazard
     hazard_rgba[display_hazard, :3] = (239, 68, 68)
     hazard_rgba[display_hazard, 3] = 220
     write_png(output / "hazard.png", hazard_rgba)
-    export_imagery(config["imagery_path"], dem.shape, output / "imagery.png")
+    export_imagery(
+        config["imagery_path"],
+        dem.shape,
+        transform,
+        crs,
+        output / "imagery.png",
+    )
 
-    above_slope = valid & (slope > MAX_WALKABLE_SLOPE_DEG)
+    above_slope = valid & (slope_deg > MAX_WALKABLE_SLOPE_DEG)
     print(
         f"{site}: cell size x={x_size_m:.3f} m, y={y_size_m:.3f} m; "
         f"slope>{MAX_WALKABLE_SLOPE_DEG:g}° in "
