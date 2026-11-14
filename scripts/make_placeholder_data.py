@@ -18,7 +18,7 @@ COLS = 64
 def make_dem() -> np.ndarray:
     """Return a smooth synthetic elevation surface, not NASA data."""
     y, x = np.mgrid[0:ROWS, 0:COLS]
-    ridge = 80.0 * np.exp(-(((x - 42.0) / 12.0) ** 2 + ((y - 30.0) / 20.0) ** 2))
+    ridge = 650.0 * np.exp(-(((x - 34.0) / 2.2) ** 2 + ((y - 32.0) / 12.0) ** 2))
     undulation = 12.0 * np.sin(x / 8.0) * np.cos(y / 11.0)
     return (1000.0 + ridge + undulation).astype("float32")
 

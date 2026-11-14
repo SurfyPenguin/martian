@@ -37,7 +37,7 @@ AOI_BOUNDS = {
 
 # PLACEHOLDER mission points in (row, column) raster pixels.
 HABITAT_PIXEL = (32, 6)
-SCIENCE_TARGET_PIXELS = ((16, 24), (42, 34), (30, 55))
+SCIENCE_TARGET_PIXELS = ((16, 24), (42, 42), (30, 55))
 
 # ASSUMPTION: maximum slope considered walkable by a suited astronaut.
 MAX_WALKABLE_SLOPE_DEG = 15.0

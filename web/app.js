@@ -11,7 +11,7 @@ function makeRasterOverlay(grid, mode) {
   canvas.height = grid.rows;
   const context = canvas.getContext("2d");
   const pixels = context.createImageData(grid.cols, grid.rows);
-  const maxSlope = 15;
+  const maxSlope = grid.max_walkable_slope_deg;
   for (let row = 0; row < grid.rows; row += 1) {
     for (let col = 0; col < grid.cols; col += 1) {
       const index = (row * grid.cols + col) * 4;
@@ -69,7 +69,12 @@ async function loadPlanner() {
   const [west, south, east, north] = grid.bounds;
   window.map = L.map("map", { zoomControl: false, attributionControl: false });
   L.control.zoom({ position: "bottomright" }).addTo(window.map);
-  window.map.fitBounds([[south, west], [north, east]]);
+  const overlayBounds = [[south, west], [north, east]];
+  console.info("Raster bounds [west, south, east, north]:", grid.bounds);
+  console.info("Leaflet overlay bounds [[south, west], [north, east]]:", overlayBounds);
+  console.info("Route endpoints (lon, lat):", route.features[0].geometry.coordinates[0],
+    route.features[0].geometry.coordinates.at(-1));
+  window.map.fitBounds(overlayBounds, { padding: [24, 24] });
 
   layers.slope = makeRasterOverlay(grid, "slope").addTo(window.map);
   layers.hazard = makeRasterOverlay(grid, "hazard").addTo(window.map);
@@ -81,12 +86,14 @@ async function loadPlanner() {
     const marker = L.circleMarker([target.lat, target.lon], {
       radius: 8, color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 1,
     });
-    marker.bindPopup(`<strong>${target.id}</strong><div class="photo-slot">PLACEHOLDER PHOTO<br>surface preview</div>`);
+    const label = `Target ${target.id.split("-")[1]}`;
+    marker.bindTooltip(label);
+    marker.bindPopup(`<strong>${label}</strong><div class="photo-slot">PLACEHOLDER PHOTO<br>surface preview</div>`);
     marker.addTo(layers.targets);
   });
   L.circleMarker([grid.habitat.lat, grid.habitat.lon], {
     radius: 7, color: "#fff", fillColor: "#68e1fd", fillOpacity: 1,
-  }).bindPopup("<strong>Habitat / rover</strong><br>Placeholder departure point.").addTo(layers.targets);
+  }).bindTooltip("Habitat").bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(layers.targets);
   layers.targets.addTo(window.map);
 
   document.getElementById("distance").textContent = formatNumber(stats.distance_km, "km", 3);

@@ -19,6 +19,7 @@
 - A* EVA route through three placeholder science targets and back to habitat
 - Leaflet demo with slope/hazard, route, target layers, opacity controls, and
   safety stats
+- Steep placeholder ridge with visible red hazard cells and route detour
 - Setup steps documented in README
 
 ## In progress

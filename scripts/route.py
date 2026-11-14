@@ -163,6 +163,7 @@ def main() -> None:
         "data_status": PLACEHOLDER_STATUS,
         "rows": rows,
         "cols": cols,
+        "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
         "bounds": [
             dem_bounds.left,
             dem_bounds.bottom,

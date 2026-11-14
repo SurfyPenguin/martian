@@ -22,6 +22,11 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .stat { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 13px 0; color: var(--muted); font-size: 13px; }
 .stat strong { color: #fff; font-variant-numeric: tabular-nums; }
 .legend p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.legend-item { color: #d7e2f2; font-size: 13px; margin: 8px 0; }
+.swatch { display: inline-block; width: 18px; height: 8px; margin-right: 7px; border-radius: 2px; vertical-align: middle; }
+.hazard-swatch { background: #ef4444; }
+.route-swatch { background: #68e1fd; }
+.target-swatch { background: #fbbf24; border-radius: 50%; width: 10px; height: 10px; margin-left: 4px; margin-right: 11px; }
 .load-status { color: var(--cyan) !important; }
 #map { min-height: 100vh; background: radial-gradient(circle at 50% 45%, #272235, #090d16 70%); }
 .leaflet-container { background: #111827; }
