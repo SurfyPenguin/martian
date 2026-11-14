@@ -1,5 +1,9 @@
 # MarsWalk Planner
 
+## Read first
+Before any task, read docs/CHALLENGE.md (what judges want), docs/PLAN.md (our design),
+and docs/STATUS.md (what is done and what is next). Update docs/STATUS.md at the end of every task.
+
 Solo hackathon project (NASA Space Apps 2026, "Interplanetary Survival Guide: Martian Map").
 Goal: a layered EVA planning map of a ~5x5 km area near Mount Sharp, Gale Crater, that
 shows hazard/slope, imagery, minerals, and a radiation/weather panel, and computes a
