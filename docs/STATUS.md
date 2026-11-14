@@ -70,6 +70,8 @@
   into a themed bottom-right control stack
 - Grouped map navigation into one toggled `MAP TOOLS` dock and aligned its
   panel and checkpoint bar styling with the sidebar's layout and typography
+- Made the scale bar choose a readable distance from the current zoom instead
+  of stretching across the map or staying fixed at 1 km
 
 ## In progress
 (nothing)

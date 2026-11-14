@@ -69,7 +69,7 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .slope-key-bar { height: 8px; border-radius: 2px; background: linear-gradient(90deg, #1c2a3a, #3e6e72 38%, #a88b3b 72%, #d69a2d); }
 .slope-key-labels { display: flex; justify-content: space-between; margin-top: 4px; }
 .coordinate-readout { font-variant-numeric: tabular-nums; }
-.map-scale { background: #111; border: 1px solid #555; color: #eee; padding: 3px 6px; font-size: 10px; text-align: center; }
+.map-scale { box-sizing: border-box; min-width: 40px; background: #111; border: 1px solid #555; color: #eee; padding: 3px 6px; font-size: 10px; text-align: center; white-space: nowrap; }
 .north-arrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; background: #181818; border: 1px solid #303030; color: #eee; padding: 7px 8px; line-height: 1; }
 .north-arrow-label { color: #9c8bd0; font-size: 8px; font-weight: 700; letter-spacing: .1em; white-space: nowrap; }
 .north-arrow-compass { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #555; border-radius: 50%; background: #171717; }

@@ -79,13 +79,28 @@ function addScaleBar(map, grid) {
   const control = L.control({ position: "bottomleft" });
   control.onAdd = () => {
     const element = L.DomUtil.create("div", "map-scale");
+    const scaleValuesKm = [
+      0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
+      1, 2, 5, 10, 20, 50, 100, 200, 500, 1000,
+    ];
+    element.setAttribute("aria-label", "Map scale");
     const update = () => {
-      const desiredKm = 1;
-      const gridWidth = desiredKm * 1000 / (window.grid?.cell_size_m.x || grid.cell_size_m.x);
+      const cellSizeM = window.grid?.cell_size_m.x || grid.cell_size_m.x;
       const start = map.latLngToContainerPoint([0, 0]);
-      const end = map.latLngToContainerPoint([0, gridWidth]);
-      element.style.width = `${Math.max(40, end.x - start.x)}px`;
-      element.textContent = `${desiredKm} km`;
+      const oneCell = map.latLngToContainerPoint([0, 1]);
+      const cellPixels = Math.abs(oneCell.x - start.x);
+      const targetPixels = 120;
+      const maxScaleKm = targetPixels * cellSizeM / (cellPixels * 1000);
+      const desiredKm = scaleValuesKm.reduce(
+        (value, candidate) => candidate <= maxScaleKm ? candidate : value,
+        scaleValuesKm[0],
+      );
+      const scalePixels = desiredKm * 1000 / cellSizeM * cellPixels;
+      const label = desiredKm < 1
+        ? `${Math.round(desiredKm * 1000)} m`
+        : `${Number.isInteger(desiredKm) ? desiredKm : desiredKm.toFixed(1)} km`;
+      element.style.width = `${Math.max(40, Math.min(targetPixels, scalePixels))}px`;
+      element.textContent = label;
     };
     map.on("zoomend moveend", update);
     update();
