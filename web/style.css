@@ -28,6 +28,9 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .outbound-swatch { background: repeating-linear-gradient(90deg, #fbbf24 0 7px, transparent 7px 11px); }
 .return-swatch { background: #68e1fd; }
 .target-swatch { background: #fbbf24; border-radius: 50%; width: 10px; height: 10px; margin-left: 4px; margin-right: 11px; }
+.slope-key { margin: 14px 0 6px; color: var(--muted); font-size: 11px; }
+.slope-key-bar { height: 8px; border-radius: 2px; background: linear-gradient(90deg, #164eaa, #14b8a6 28%, #facc15 58%, #f97316 80%, #e11d48); }
+.slope-key-labels { display: flex; justify-content: space-between; margin-top: 4px; }
 .coordinate-readout { font-variant-numeric: tabular-nums; }
 .map-scale { background: rgba(9, 13, 22, .88); border: 1px solid #91a0b8; color: #eef5ff; padding: 3px 6px; font-size: 11px; text-align: center; }
 .north-arrow { display: flex; flex-direction: column; align-items: center; background: rgba(9, 13, 22, .88); border: 1px solid #91a0b8; color: #eef5ff; padding: 5px 8px; line-height: 1; }

@@ -23,6 +23,7 @@
 - Web map aligned on one row/column grid with padded fit and distinct return leg
 - Added grid scale bar, north arrow, habitat-relative coordinate readout, and
   per-target leg tooltips
+- Improved slope map with a cool-to-warm severity ramp and labeled degree key
 - Setup steps documented in README
 
 ## In progress

@@ -9,6 +9,13 @@ function gridToLeaflet([row, col]) {
   return [window.grid.rows - row, col];
 }
 
+function slopeColor(ratio) {
+  const clamped = Math.min(1, Math.max(0, ratio));
+  const hue = 215 - clamped * 185;
+  const lightness = 42 + (1 - clamped) * 8;
+  return `hsl(${hue} 84% ${lightness}%)`;
+}
+
 function makeRasterOverlay(grid, mode, bounds) {
   const canvas = document.createElement("canvas");
   canvas.width = grid.cols;
@@ -32,10 +39,23 @@ function makeRasterOverlay(grid, mode, bounds) {
         pixels.data[index + 3] = 220;
       } else {
         const ratio = Math.min(1, Math.max(0, slope / maxSlope));
-        pixels.data[index] = Math.round(40 + ratio * 210);
-        pixels.data[index + 1] = Math.round(190 - ratio * 140);
-        pixels.data[index + 2] = 255;
-        pixels.data[index + 3] = 170;
+        const color = slopeColor(ratio);
+        const match = color.match(/\d+/g).map(Number);
+        const hue = match[0] / 360;
+        const saturation = match[1] / 100;
+        const lightness = match[2] / 100;
+        const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+        const x = chroma * (1 - Math.abs((hue * 6) % 2 - 1));
+        const m = lightness - chroma / 2;
+        const rgb = hue * 6 < 1 ? [chroma, x, 0]
+          : hue * 6 < 2 ? [x, chroma, 0]
+            : hue * 6 < 3 ? [0, chroma, x]
+              : hue * 6 < 4 ? [0, x, chroma]
+                : hue * 6 < 5 ? [x, 0, chroma] : [chroma, 0, x];
+        pixels.data[index] = Math.round((rgb[0] + m) * 255);
+        pixels.data[index + 1] = Math.round((rgb[1] + m) * 255);
+        pixels.data[index + 2] = Math.round((rgb[2] + m) * 255);
+        pixels.data[index + 3] = Math.round(105 + ratio * 100);
       }
     }
   }
@@ -161,6 +181,7 @@ async function loadPlanner() {
   document.getElementById("time").textContent = formatNumber(stats.time_h, "h", 3);
   document.getElementById("margin").textContent = formatNumber(stats.return_margin_h, "h", 3);
   document.getElementById("dose").textContent = formatNumber(stats.est_dose_msv, "mSv", 4);
+  document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
   document.getElementById("load-status").textContent = "Layers loaded. All mission points are placeholders.";
 
   setLayerControl("slope", "slope-toggle", "slope-opacity");
