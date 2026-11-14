@@ -50,6 +50,10 @@
 - Generated real routes: 9.738 km / 3.246 h for Gale crater floor and
   5.955 km / 1.985 h for Southern box
 - Setup steps documented in README
+- Replaced the checkpoint strip with a collapsible mission top bar showing
+  route totals, return margin, checkpoint coordinates, and per-leg distance/time
+- Replaced zoom presets with an inline zoom percentage slider
+- Improved terrain inspector hierarchy and kept it clear of map zoom controls
 
 ## In progress
 (nothing)

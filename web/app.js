@@ -125,24 +125,23 @@ function addZoomPercentageControl(map, minZoom) {
   control.onAdd = () => {
     const element = L.DomUtil.create("label", "zoom-percent-control");
     element.innerHTML = "<span>ZOOM</span>";
-    const select = L.DomUtil.create("select", "", element);
-    [100, 125, 150, 200, 300].forEach((percentage) => {
-      const option = L.DomUtil.create("option", "", select);
-      option.value = percentage;
-      option.textContent = `${percentage}%`;
-    });
+    const output = L.DomUtil.create("output", "", element);
+    const slider = L.DomUtil.create("input", "", element);
+    slider.type = "range";
+    slider.min = "100";
+    slider.max = "300";
+    slider.step = "25";
+    slider.value = "100";
+    slider.setAttribute("aria-label", "Map zoom percentage");
     const sync = () => {
       const percentage = 100 * (2 ** (map.getZoom() - (window.mapMinZoom || minZoom)));
-      const closest = [100, 125, 150, 200, 300]
-        .reduce((previous, current) => (
-          Math.abs(current - percentage) < Math.abs(previous - percentage)
-            ? current : previous
-        ));
-      select.value = closest;
+      const value = Math.min(300, Math.max(100, Math.round(percentage / 25) * 25));
+      slider.value = value;
+      output.textContent = `${value}%`;
     };
-    L.DomEvent.disableClickPropagation(select);
-    L.DomEvent.on(select, "change", () => {
-      map.setZoom((window.mapMinZoom || minZoom) + Math.log2(Number(select.value) / 100));
+    L.DomEvent.disableClickPropagation(slider);
+    L.DomEvent.on(slider, "input", () => {
+      map.setZoom((window.mapMinZoom || minZoom) + Math.log2(Number(slider.value) / 100));
     });
     map.on("zoomend", sync);
     sync();
@@ -171,6 +170,30 @@ function inspectCell(grid, latlng) {
   };
 }
 
+function renderCheckpointDetails(grid, stats) {
+  const points = [
+    { label: "Habitat", point: grid.habitat, leg: null },
+    ...grid.targets.map((target, index) => ({
+      label: `Target ${index + 1}`,
+      point: target,
+      leg: grid.legs[index],
+    })),
+    { label: "Return", point: grid.habitat, leg: grid.legs.at(-1) },
+  ];
+  document.getElementById("checkpoint-summary").textContent =
+    `${stats.distance_km.toFixed(3)} km total · ${stats.time_h.toFixed(3)} h EVA · `
+    + `${stats.return_margin_h.toFixed(3)} h margin`;
+  document.getElementById("checkpoint-leg-list").innerHTML = points.map((item) => {
+    const meta = item.leg
+      ? `${item.leg.distance_km.toFixed(3)} km · ${item.leg.time_h.toFixed(3)} h`
+      : "departure point";
+    const coordinates = `${item.point.lat.toFixed(5)}°, ${item.point.lon.toFixed(5)}°`;
+    return `<div class="checkpoint-detail"><span class="checkpoint-detail-label">${item.label}</span>`
+      + `<span class="checkpoint-detail-meta">${meta}</span>`
+      + `<span class="checkpoint-detail-coord">${coordinates}</span></div>`;
+  }).join("");
+}
+
 async function loadSite(site) {
   const root = `/data/processed/${site}/`;
   const [stats, grid] = await Promise.all([
@@ -189,8 +212,10 @@ async function loadSite(site) {
   document.getElementById("site-region").textContent = "Real NASA data";
   document.getElementById("site-select").value = site;
   document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
+  renderCheckpointDetails(grid, stats);
   document.getElementById("map-inspector").innerHTML =
-    "<strong class=\"inspector-coordinate\">SITE READY</strong>"
+    "<span class=\"inspector-kicker\">TERRAIN INSPECTOR</span>"
+    + "<strong class=\"inspector-coordinate\">SITE READY</strong>"
     + "<span class=\"inspector-terrain\">Move over the real DEM and imagery</span>";
 
   layers.terrain = makeImageOverlay(grid.layer_paths.elevation, bounds, "terrain-pane").addTo(window.map);
@@ -284,6 +309,15 @@ async function loadPlanner() {
   setLayerControl("hazard", "hazard-toggle", "hazard-opacity");
   setLayerControl("route", "route-toggle", "route-opacity");
   setLayerControl("targets", "targets-toggle", "targets-opacity");
+  const checkpointToggle = document.getElementById("checkpoint-toggle");
+  checkpointToggle.addEventListener("click", () => {
+    const details = document.getElementById("checkpoint-details");
+    const expanded = checkpointToggle.getAttribute("aria-expanded") === "true";
+    checkpointToggle.setAttribute("aria-expanded", String(!expanded));
+    checkpointToggle.innerHTML = `${expanded ? "Show details" : "Hide details"} <i></i>`;
+    document.querySelector(".map-route-chip").classList.toggle("is-expanded", !expanded);
+    details.hidden = expanded;
+  });
   window.map.on("mousemove", (event) => {
     if (!window.grid) return;
     const grid = window.grid;
@@ -297,7 +331,8 @@ async function loadPlanner() {
     document.getElementById("coordinate-readout").textContent =
       `Lat ${latitude} · Lon ${longitude}`;
     document.getElementById("map-inspector").innerHTML =
-      `<strong class="inspector-coordinate">${latitude}°, ${longitude}°</strong>`
+      "<span class=\"inspector-kicker\">TERRAIN INSPECTOR</span>"
+      + `<strong class="inspector-coordinate">${latitude}°, ${longitude}°</strong>`
       + `<span class="inspector-terrain">Grid ${cell.row}, ${cell.col} · real elevation layer</span>`
       + `<span class="inspector-distance">From Habitat: ${rangeKm.toFixed(2)} km</span>`;
   });
