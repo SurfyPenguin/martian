@@ -25,6 +25,7 @@
   per-target leg tooltips
 - Improved slope map with a cool-to-warm severity ramp and labeled degree key
 - Route cost now penalizes steepness quadratically, favoring a gentler detour
+- Refined tablet UI hierarchy, safety status, layer controls, and mobile layout
 - Setup steps documented in README
 
 ## In progress

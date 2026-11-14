@@ -182,6 +182,14 @@ async function loadPlanner() {
   document.getElementById("margin").textContent = formatNumber(stats.return_margin_h, "h", 3);
   document.getElementById("dose").textContent = formatNumber(stats.est_dose_msv, "mSv", 4);
   document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
+  const safetyStatus = document.getElementById("safety-status");
+  const withinLimit = stats.return_margin_h >= 0;
+  const tightMargin = withinLimit && stats.return_margin_h < 0.25;
+  safetyStatus.textContent = !withinLimit
+    ? "OVER EVA LIMIT"
+    : tightMargin ? "LOW RETURN MARGIN" : "WITHIN EVA LIMIT";
+  safetyStatus.classList.toggle("warning", !withinLimit);
+  safetyStatus.classList.toggle("caution", tightMargin);
   document.getElementById("load-status").textContent = "Layers loaded. All mission points are placeholders.";
 
   setLayerControl("slope", "slope-toggle", "slope-opacity");
