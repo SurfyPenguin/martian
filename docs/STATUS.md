@@ -28,6 +28,8 @@
 - Refined tablet UI hierarchy, safety status, layer controls, and mobile layout
 - Added placeholder lat/lon metadata, an elevation-derived terrain layer,
   map reset/leg interactions, and a lat/lon/elevation/slope inspector
+- Fixed layer stacking when toggling terrain and added high-contrast route
+  casings with clearer outbound/return leg graphics
 - Setup steps documented in README
 
 ## In progress

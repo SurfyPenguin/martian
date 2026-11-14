@@ -28,7 +28,7 @@ function slopeColor(ratio) {
   return rgb.map((channel) => Math.round((channel + offset) * 255));
 }
 
-function makeTerrainOverlay(grid, bounds) {
+function makeTerrainOverlay(grid, bounds, pane) {
   const canvas = document.createElement("canvas");
   canvas.width = grid.cols;
   canvas.height = grid.rows;
@@ -61,10 +61,10 @@ function makeTerrainOverlay(grid, bounds) {
     }
   }
   context.putImageData(pixels, 0, 0);
-  return L.imageOverlay(canvas.toDataURL(), bounds);
+  return L.imageOverlay(canvas.toDataURL(), bounds, { pane });
 }
 
-function makeRasterOverlay(grid, mode, bounds) {
+function makeRasterOverlay(grid, mode, bounds, pane) {
   const canvas = document.createElement("canvas");
   canvas.width = grid.cols;
   canvas.height = grid.rows;
@@ -96,7 +96,7 @@ function makeRasterOverlay(grid, mode, bounds) {
     }
   }
   context.putImageData(pixels, 0, 0);
-  return L.imageOverlay(canvas.toDataURL(), bounds);
+  return L.imageOverlay(canvas.toDataURL(), bounds, { pane });
 }
 
 function setLayerControl(name, toggleId, opacityId) {
@@ -196,6 +196,17 @@ async function loadPlanner() {
     zoomControl: false,
     attributionControl: false,
   });
+  const paneOrder = {
+    terrain: 210,
+    slope: 220,
+    hazard: 230,
+    route: 450,
+    targets: 460,
+  };
+  Object.entries(paneOrder).forEach(([name, zIndex]) => {
+    const pane = window.map.createPane(`${name}-pane`);
+    pane.style.zIndex = zIndex;
+  });
   L.control.zoom({ position: "bottomright" }).addTo(window.map);
   const minZoom = window.map.getBoundsZoom(bounds);
   window.map.setMinZoom(minZoom);
@@ -211,24 +222,37 @@ async function loadPlanner() {
     `<strong>${center.lat.toFixed(5)}°, ${center.lon.toFixed(5)}°</strong>`
     + "<span>Move over terrain to inspect elevation and slope</span>";
 
-  layers.terrain = makeTerrainOverlay(grid, bounds).addTo(window.map);
-  layers.slope = makeRasterOverlay(grid, "slope", bounds).addTo(window.map);
-  layers.hazard = makeRasterOverlay(grid, "hazard", bounds).addTo(window.map);
+  layers.terrain = makeTerrainOverlay(grid, bounds, "terrain-pane").addTo(window.map);
+  layers.slope = makeRasterOverlay(grid, "slope", bounds, "slope-pane").addTo(window.map);
+  layers.hazard = makeRasterOverlay(grid, "hazard", bounds, "hazard-pane").addTo(window.map);
   const outboundPixels = grid.route_segments.slice(0, -1).flatMap((segment, index) =>
     index === 0 ? segment : segment.slice(1));
   const returnPixels = grid.route_segments.at(-1);
+  const outboundPath = outboundPixels.map(gridToLeaflet);
+  const returnPath = returnPixels.map(gridToLeaflet);
   layers.route = L.layerGroup([
-    L.polyline(outboundPixels.map(gridToLeaflet), {
-      color: "#fbbf24", weight: 4, opacity: 1, dashArray: "8 8",
+    L.polyline(outboundPath, {
+      color: "#080d16", weight: 10, opacity: .9, lineCap: "round", lineJoin: "round",
+      pane: "route-pane",
+    }),
+    L.polyline(outboundPath, {
+      color: "#fbbf24", weight: 5, opacity: 1, dashArray: "10 8",
+      lineCap: "round", lineJoin: "round", pane: "route-pane",
     }).bindTooltip("Outbound leg · Habitat → science targets"),
-    L.polyline(returnPixels.map(gridToLeaflet), {
-      color: "#68e1fd", weight: 5, opacity: 1,
+    L.polyline(returnPath, {
+      color: "#080d16", weight: 12, opacity: .9, lineCap: "round", lineJoin: "round",
+      pane: "route-pane",
+    }),
+    L.polyline(returnPath, {
+      color: "#68e1fd", weight: 6, opacity: 1,
+      lineCap: "round", lineJoin: "round", pane: "route-pane",
     }).bindTooltip("Return leg · Target 3 → Habitat"),
   ]).addTo(window.map);
   layers.targets = L.layerGroup();
   grid.targets.forEach((target) => {
     const marker = L.circleMarker(gridToLeaflet([target.row, target.col]), {
-      radius: 8, color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 1,
+      radius: 9, color: "#080d16", weight: 3, fillColor: "#fbbf24", fillOpacity: 1,
+      pane: "targets-pane",
     });
     const label = `Target ${target.id.split("-")[1]}`;
     const leg = grid.legs.find((item) => item.name === target.id);
@@ -239,7 +263,8 @@ async function loadPlanner() {
     marker.addTo(layers.targets);
   });
   L.circleMarker(gridToLeaflet([grid.habitat.row, grid.habitat.col]), {
-    radius: 7, color: "#fff", fillColor: "#68e1fd", fillOpacity: 1,
+    radius: 8, color: "#080d16", weight: 3, fillColor: "#68e1fd", fillOpacity: 1,
+    pane: "targets-pane",
   }).bindTooltip(`Habitat · return ${grid.legs.at(-1).distance_km.toFixed(3)} km · ${grid.legs.at(-1).time_h.toFixed(3)} h`)
     .bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(layers.targets);
   layers.targets.addTo(window.map);
