@@ -134,6 +134,45 @@ function setLayerControl(name, toggleId, opacityId) {
   opacity.addEventListener("input", () => setLayerOpacity(layers[name], Number(opacity.value)));
 }
 
+function setupSidebarResizer() {
+  const shell = document.querySelector(".shell");
+  const handle = document.querySelector(".sidebar-resizer");
+  const mediaQuery = window.matchMedia("(max-width: 760px)");
+  if (!shell || !handle) return;
+
+  const setWidth = (width) => {
+    const maxWidth = Math.min(480, window.innerWidth * 0.45);
+    const nextWidth = Math.max(260, Math.min(maxWidth, width));
+    shell.style.setProperty("--sidebar-width", `${nextWidth}px`);
+    window.map?.invalidateSize({ pan: false });
+  };
+  let dragging = false;
+  handle.addEventListener("pointerdown", (event) => {
+    if (mediaQuery.matches) return;
+    dragging = true;
+    handle.setPointerCapture(event.pointerId);
+    shell.classList.add("is-resizing");
+    event.preventDefault();
+  });
+  handle.addEventListener("pointermove", (event) => {
+    if (dragging) setWidth(event.clientX);
+  });
+  const stopDragging = () => {
+    dragging = false;
+    shell.classList.remove("is-resizing");
+  };
+  handle.addEventListener("pointerup", stopDragging);
+  handle.addEventListener("pointercancel", stopDragging);
+  handle.addEventListener("keydown", (event) => {
+    if (mediaQuery.matches) return;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      setWidth(shell.querySelector(".sidebar").getBoundingClientRect().width
+        + (event.key === "ArrowRight" ? 16 : -16));
+      event.preventDefault();
+    }
+  });
+}
+
 function setLayerOpacity(layer, value) {
   if (layer.setOpacity) {
     layer.setOpacity(value);
@@ -370,6 +409,7 @@ async function loadPlanner() {
   setLayerControl("targets", "targets-toggle", "targets-opacity");
 }
 
+setupSidebarResizer();
 loadPlanner().catch((error) => {
   console.error(error);
   document.getElementById("load-status").textContent = "Could not load processed layers.";

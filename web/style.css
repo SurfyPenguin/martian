@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  --sidebar-width: 300px;
   --bg: #000;
   --panel: #111;
   --panel-deep: #181818;
@@ -13,8 +14,15 @@
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; background: var(--bg); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 body { color: #f2f2f2; }
-.shell { display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
+.shell { display: grid; grid-template-columns: var(--sidebar-width) 12px 1fr; height: 100vh; }
 .sidebar { background: var(--panel); border-right: 1px solid #202020; padding: 24px 20px; z-index: 1000; overflow-y: auto; }
+.sidebar-resizer { position: relative; z-index: 1001; width: 12px; height: 100%; padding: 0; border: 0; background: #080808; cursor: col-resize; }
+.sidebar-resizer::before { content: ""; position: absolute; top: 50%; left: 5px; width: 2px; height: 48px; border-radius: 2px; background: #555; transform: translateY(-50%); }
+.sidebar-resizer::after { content: ""; position: absolute; top: 50%; left: 4px; width: 4px; height: 20px; background: radial-gradient(circle, #aaa 1px, transparent 1.5px) center / 4px 6px repeat-y; transform: translateY(-50%); }
+.sidebar-resizer:hover, .shell.is-resizing .sidebar-resizer { background: #17131f; }
+.sidebar-resizer:hover::before, .shell.is-resizing .sidebar-resizer::before { background: var(--cyan); }
+.sidebar-resizer:hover::after, .shell.is-resizing .sidebar-resizer::after { background: radial-gradient(circle, #fff 1px, transparent 1.5px) center / 4px 6px repeat-y; }
+.sidebar-resizer:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
 .brand-mark { display: flex; gap: 3px; height: 24px; align-items: center; margin: 0 0 22px 4px; }
 .brand-mark span { display: block; width: 12px; height: 12px; border-top: 2px solid #f2f2f2; border-right: 2px solid #f2f2f2; transform: rotate(45deg); }
 h1 { font-size: 22px; letter-spacing: -.06em; line-height: 1.08; margin: 0 0 14px; max-width: 14ch; }
@@ -98,6 +106,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 ::-webkit-scrollbar-thumb { background: #34445d; border-radius: 8px; }
 @media (max-width: 760px) {
   .shell { display: block; }
+  .sidebar-resizer { display: none; }
   .sidebar { position: absolute; width: min(390px, calc(100vw - 24px)); max-height: calc(100vh - 24px); height: auto; margin: 12px; padding: 20px 18px; border: 1px solid #2d2d2d; border-radius: 12px; box-shadow: 0 18px 45px rgba(0, 0, 0, .45); }
   .sidebar .legend { margin-bottom: 2px; }
   .north-arrow { display: none; }

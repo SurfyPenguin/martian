@@ -42,6 +42,7 @@
 - Clarified the map inspector typography, moved it above zoom controls, and
   added selectable percentage zoom presets
 - Reworked the north indicator as a compact grid-north compass
+- Added a desktop sidebar resize handle with keyboard arrow support
 - Setup steps documented in README
 
 ## In progress
