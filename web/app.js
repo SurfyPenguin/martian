@@ -94,58 +94,92 @@ function addScaleBar(map, grid) {
   control.addTo(map);
 }
 
-function addNorthArrow(map) {
-  const control = L.control({ position: "bottomright" });
-  control.onAdd = () => {
-    const element = L.DomUtil.create("div", "north-arrow");
-    element.setAttribute("aria-label", "Grid north");
-    element.innerHTML = "<span class=\"north-arrow-label\">GRID NORTH</span>"
-      + "<span class=\"north-arrow-compass\"><i></i><b>N</b></span>";
-    return element;
-  };
-  control.addTo(map);
+function createNorthArrow() {
+  const element = L.DomUtil.create("div", "north-arrow");
+  element.setAttribute("aria-label", "Grid north");
+  element.innerHTML = "<span class=\"north-arrow-label\">GRID NORTH</span>"
+    + "<span class=\"north-arrow-compass\"><i></i><b>N</b></span>";
+  return element;
 }
 
-function addResetControl(map, bounds) {
-  const control = L.control({ position: "bottomright" });
-  control.onAdd = () => {
-    const button = L.DomUtil.create("button", "map-action");
-    button.type = "button";
-    button.textContent = "Reset view";
-    button.title = "Fit the full mission area";
-    L.DomEvent.disableClickPropagation(button);
-    L.DomEvent.on(button, "click", () => map.fitBounds(window.siteBounds || bounds, { padding: [24, 24] }));
-    return button;
-  };
-  control.addTo(map);
+function createResetControl(map, bounds) {
+  const button = L.DomUtil.create("button", "map-action");
+  button.type = "button";
+  button.textContent = "Reset view";
+  button.title = "Fit the full mission area";
+  L.DomEvent.on(button, "click", () => {
+    map.fitBounds(window.siteBounds || bounds, { padding: [24, 24] });
+  });
+  return button;
 }
 
-function addZoomPercentageControl(map, minZoom) {
+function createZoomPercentageControl(map, minZoom) {
+  const element = L.DomUtil.create("label", "zoom-percent-control");
+  element.innerHTML = "<span>ZOOM</span>";
+  const output = L.DomUtil.create("output", "", element);
+  const slider = L.DomUtil.create("input", "", element);
+  slider.type = "range";
+  slider.min = "100";
+  slider.max = "300";
+  slider.step = "25";
+  slider.value = "100";
+  slider.setAttribute("aria-label", "Map zoom percentage");
+  const sync = () => {
+    const percentage = 100 * (2 ** (map.getZoom() - (window.mapMinZoom || minZoom)));
+    const value = Math.min(300, Math.max(100, Math.round(percentage / 25) * 25));
+    slider.value = value;
+    output.textContent = `${value}%`;
+  };
+  L.DomEvent.on(slider, "input", () => {
+    map.setZoom((window.mapMinZoom || minZoom) + Math.log2(Number(slider.value) / 100));
+  });
+  map.on("zoomend", sync);
+  sync();
+  return element;
+}
+
+function createZoomButtons(map) {
+  const element = L.DomUtil.create("div", "map-zoom-buttons");
+  const zoomIn = L.DomUtil.create("button", "map-zoom-button", element);
+  zoomIn.type = "button";
+  zoomIn.textContent = "+";
+  zoomIn.setAttribute("aria-label", "Zoom in");
+  const zoomOut = L.DomUtil.create("button", "map-zoom-button", element);
+  zoomOut.type = "button";
+  zoomOut.textContent = "−";
+  zoomOut.setAttribute("aria-label", "Zoom out");
+  L.DomEvent.on(zoomIn, "click", () => map.zoomIn());
+  L.DomEvent.on(zoomOut, "click", () => map.zoomOut());
+  return element;
+}
+
+function addNavigationDock(map, bounds, minZoom) {
   const control = L.control({ position: "bottomright" });
   control.onAdd = () => {
-    const element = L.DomUtil.create("label", "zoom-percent-control");
-    element.innerHTML = "<span>ZOOM</span>";
-    const output = L.DomUtil.create("output", "", element);
-    const slider = L.DomUtil.create("input", "", element);
-    slider.type = "range";
-    slider.min = "100";
-    slider.max = "300";
-    slider.step = "25";
-    slider.value = "100";
-    slider.setAttribute("aria-label", "Map zoom percentage");
-    const sync = () => {
-      const percentage = 100 * (2 ** (map.getZoom() - (window.mapMinZoom || minZoom)));
-      const value = Math.min(300, Math.max(100, Math.round(percentage / 25) * 25));
-      slider.value = value;
-      output.textContent = `${value}%`;
-    };
-    L.DomEvent.disableClickPropagation(slider);
-    L.DomEvent.on(slider, "input", () => {
-      map.setZoom((window.mapMinZoom || minZoom) + Math.log2(Number(slider.value) / 100));
+    const dock = L.DomUtil.create("div", "map-control-dock");
+    const toggle = L.DomUtil.create("button", "map-control-dock-toggle", dock);
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-controls", "map-navigation-panel");
+    toggle.innerHTML = "<span class=\"map-control-dock-label\">MAP TOOLS</span>"
+      + "<i aria-hidden=\"true\"></i>";
+    const panel = L.DomUtil.create("div", "map-control-dock-panel", dock);
+    panel.id = "map-navigation-panel";
+    panel.hidden = true;
+    panel.append(
+      createZoomPercentageControl(map, minZoom),
+      createResetControl(map, bounds),
+      createNorthArrow(),
+      createZoomButtons(map),
+    );
+    L.DomEvent.disableClickPropagation(dock);
+    L.DomEvent.on(toggle, "click", () => {
+      const isOpen = !panel.hidden;
+      panel.hidden = isOpen;
+      dock.classList.toggle("is-open", !isOpen);
+      toggle.setAttribute("aria-expanded", String(!isOpen));
     });
-    map.on("zoomend", sync);
-    sync();
-    return element;
+    return dock;
   };
   control.addTo(map);
 }
@@ -323,8 +357,6 @@ async function loadPlanner() {
     const pane = window.map.createPane(`${name}-pane`);
     pane.style.zIndex = zIndex;
   });
-  L.control.zoom({ position: "bottomright" }).addTo(window.map);
-  addNorthArrow(window.map);
   const siteSelect = document.getElementById("site-select");
   siteSelect.addEventListener("change", () => loadSite(siteSelect.value).catch((error) => {
     console.error(error);
@@ -370,8 +402,7 @@ async function loadPlanner() {
   });
   await loadSite(siteSelect.value);
   addScaleBar(window.map, window.grid);
-  addResetControl(window.map, window.siteBounds);
-  addZoomPercentageControl(window.map, window.mapMinZoom);
+  addNavigationDock(window.map, window.siteBounds, window.mapMinZoom);
 }
 
 setupSidebarResizer();

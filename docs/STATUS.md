@@ -68,6 +68,8 @@
   status bar showing latitude, longitude, grid position, and habitat range
 - Moved zoom, zoom percentage, reset view, and grid-north navigation controls
   into a themed bottom-right control stack
+- Grouped map navigation into one toggled `MAP TOOLS` dock and aligned its
+  panel and checkpoint bar styling with the sidebar's layout and typography
 
 ## In progress
 (nothing)
