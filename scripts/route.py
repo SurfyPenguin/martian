@@ -22,6 +22,9 @@ if __package__:
         WALKING_SPEED_KMH,
         DOSE_RATE_MSV_PER_HOUR,
         SLOPE_COST_POWER,
+        AOI_BOUNDS,
+        CENTER_LAT,
+        CENTER_LON,
     )
     from .slope import cell_size_meters
 else:
@@ -39,6 +42,9 @@ else:
         WALKING_SPEED_KMH,
         DOSE_RATE_MSV_PER_HOUR,
         SLOPE_COST_POWER,
+        AOI_BOUNDS,
+        CENTER_LAT,
+        CENTER_LON,
     )
     from slope import cell_size_meters
 
@@ -112,6 +118,7 @@ def main() -> None:
     with rasterio.open(DEM_PATH) as dem_source, rasterio.open(
         HAZARD_PATH
     ) as hazard_source:
+        elevation_m = dem_source.read(1)
         with rasterio.open(SLOPE_PATH) as slope_source:
             slope_deg = slope_source.read(1)
         hazard = hazard_source.read(1)
@@ -172,6 +179,13 @@ def main() -> None:
         "cols": cols,
         "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
         "cell_size_m": {"x": x_size_m, "y": y_size_m},
+        "geo_reference": {
+            "status": "PLACEHOLDER - interpolated from config.py AOI",
+            "center_lat": CENTER_LAT,
+            "center_lon": CENTER_LON,
+            "bounds": AOI_BOUNDS,
+        },
+        "elevation_m": np.round(elevation_m, 2).tolist(),
         "slope_deg": np.round(slope_deg, 3).tolist(),
         "walkable": walkable.tolist(),
         "route_pixels": route_pixels,

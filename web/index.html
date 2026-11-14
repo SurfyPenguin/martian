@@ -12,7 +12,6 @@
   <main class="shell">
     <aside class="sidebar">
       <header class="mission-header">
-        <div class="eyebrow">MARSWALK / EVA PLANNER</div>
         <h1>Mount Sharp field plan</h1>
         <div class="mission-meta"><span>Gale Crater</span><span>5 × 5 km survey</span><span>3 targets</span></div>
       </header>
@@ -21,10 +20,11 @@
       <section class="control-section">
         <div class="section-heading">
           <h2>Layers</h2>
-          <span>visibility · opacity</span>
         </div>
+        <label class="layer-row"><input id="terrain-toggle" type="checkbox" checked>
+          <span class="layer-name"><i class="layer-mark terrain-mark"></i>Terrain</span><input id="terrain-opacity" aria-label="Terrain opacity" type="range" min="0" max="1" step="0.05" value="0.9"></label>
         <label class="layer-row"><input id="slope-toggle" type="checkbox" checked>
-          <span class="layer-name"><i class="layer-mark slope-mark"></i>Slope</span><input id="slope-opacity" aria-label="Slope opacity" type="range" min="0" max="1" step="0.05" value="0.55"></label>
+          <span class="layer-name"><i class="layer-mark slope-mark"></i>Slope</span><input id="slope-opacity" aria-label="Slope opacity" type="range" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="layer-row"><input id="hazard-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark hazard-mark"></i>Hazard</span><input id="hazard-opacity" aria-label="Hazard opacity" type="range" min="0" max="1" step="0.05" value="0.7"></label>
         <label class="layer-row"><input id="route-toggle" type="checkbox" checked>
@@ -47,7 +47,7 @@
 
       <section class="legend control-section">
         <h2>Legend</h2>
-        <div class="legend-item"><span class="swatch hazard-swatch"></span> Red = too steep</div>
+        <div class="legend-item"><span class="swatch hazard-swatch"></span>Too steep</div>
         <div class="legend-item"><span class="swatch outbound-swatch"></span> Outbound</div>
         <div class="legend-item"><span class="swatch return-swatch"></span> Return</div>
         <div class="legend-item"><span class="swatch target-swatch"></span> Targets</div>
@@ -55,12 +55,15 @@
           <div class="slope-key-bar"></div>
           <div class="slope-key-labels"><span>0°</span><span id="slope-limit">15°+</span></div>
         </div>
-        <p>Red cells exceed the configured walkable slope assumption. Targets and route are placeholders for demo navigation only.</p>
+        <p>Red cells exceed the walkable slope setting. All terrain and targets are synthetic placeholders.</p>
         <p id="coordinate-readout" class="coordinate-readout">Move over the grid for coordinates.</p>
         <p id="load-status" class="load-status">Loading processed layers...</p>
       </section>
     </aside>
-    <div id="map" aria-label="Mars EVA planning map"></div>
+    <div id="map" aria-label="Mars EVA planning map">
+      <div class="map-route-chip"><span class="route-chip-kicker">CURRENT EVA</span><strong>Habitat → T1 → T2 → T3 → Habitat</strong></div>
+      <div id="map-inspector" class="map-inspector">Move over terrain to inspect</div>
+    </div>
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

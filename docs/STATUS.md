@@ -26,6 +26,8 @@
 - Improved slope map with a cool-to-warm severity ramp and labeled degree key
 - Route cost now penalizes steepness quadratically, favoring a gentler detour
 - Refined tablet UI hierarchy, safety status, layer controls, and mobile layout
+- Added placeholder lat/lon metadata, an elevation-derived terrain layer,
+  map reset/leg interactions, and a lat/lon/elevation/slope inspector
 - Setup steps documented in README
 
 ## In progress
