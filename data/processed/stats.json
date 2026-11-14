@@ -1,8 +1,8 @@
 {
   "data_status": "PLACEHOLDER - route derived from synthetic DEM",
-  "distance_km": 11.88,
-  "time_h": 3.96,
-  "return_margin_h": 0.04,
-  "est_dose_msv": 0.0792,
+  "distance_km": 11.991,
+  "time_h": 3.997,
+  "return_margin_h": 0.003,
+  "est_dose_msv": 0.0799,
   "max_walkable_slope_deg": 15.0
 }

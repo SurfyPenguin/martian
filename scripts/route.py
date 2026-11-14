@@ -21,6 +21,7 @@ if __package__:
         STATS_PATH,
         WALKING_SPEED_KMH,
         DOSE_RATE_MSV_PER_HOUR,
+        SLOPE_COST_POWER,
     )
     from .slope import cell_size_meters
 else:
@@ -37,6 +38,7 @@ else:
         STATS_PATH,
         WALKING_SPEED_KMH,
         DOSE_RATE_MSV_PER_HOUR,
+        SLOPE_COST_POWER,
     )
     from slope import cell_size_meters
 
@@ -93,7 +95,8 @@ def astar(
             row_step = (next_cell[0] - current[0]) * y_size_m
             col_step = (next_cell[1] - current[1]) * x_size_m
             distance_m = math.hypot(row_step, col_step)
-            terrain_factor = 1.0 + float(slope_deg[next_cell]) / MAX_WALKABLE_SLOPE_DEG
+            normalized_slope = float(slope_deg[next_cell]) / MAX_WALKABLE_SLOPE_DEG
+            terrain_factor = 1.0 + normalized_slope**SLOPE_COST_POWER
             next_cost = current_cost + distance_m * terrain_factor
             if next_cost < cost_so_far.get(next_cell, math.inf):
                 cost_so_far[next_cell] = next_cost

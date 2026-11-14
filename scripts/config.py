@@ -47,3 +47,6 @@ WALKING_SPEED_KMH = 3.0
 EVA_HOURS = 4.0
 # ASSUMPTION: estimated radiation dose rate used for planning displays.
 DOSE_RATE_MSV_PER_HOUR = 0.02
+# ROUTE SETTING: emphasize steeper cells while keeping the route within the
+# configured EVA time limit.
+SLOPE_COST_POWER = 1.1

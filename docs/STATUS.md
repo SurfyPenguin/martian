@@ -24,6 +24,7 @@
 - Added grid scale bar, north arrow, habitat-relative coordinate readout, and
   per-target leg tooltips
 - Improved slope map with a cool-to-warm severity ramp and labeled degree key
+- Route cost now penalizes steepness quadratically, favoring a gentler detour
 - Setup steps documented in README
 
 ## In progress
