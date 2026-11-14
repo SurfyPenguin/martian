@@ -43,15 +43,22 @@
   added selectable percentage zoom presets
 - Reworked the north indicator as a compact grid-north compass
 - Added a desktop sidebar resize handle with keyboard arrow support
+- Switched the default pipeline to the supplied real DEM and CTX imagery for
+  Gale crater floor and Southern box
+- Added per-site input schema documentation, degree-to-meter Mars cell sizing,
+  NoData masking, 5x5 roughness hazards, RGBA web exports, and site selection
+- Generated real routes: 9.738 km / 3.246 h for Gale crater floor and
+  5.955 km / 1.985 h for Southern box
 - Setup steps documented in README
 
 ## In progress
 (nothing)
 
 ## Blocked on me
-- Real DEM clip and imagery for the AOI (not downloaded yet)
+- Habitat and target coordinates are placeholders pending mission-provided points
+- Radiation and weather sources are not integrated yet
 
 ## Next
-1. Replace placeholder terrain and targets with documented NASA data
-2. Add real surface imagery and destination photos
+1. Replace placeholder habitat and target coordinates with mission points
+2. Add destination photos and validate imagery provenance
 3. Add weather/radiation data sources and validation

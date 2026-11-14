@@ -13,19 +13,23 @@
     <aside class="sidebar">
       <div class="brand-mark" aria-label="MarsWalk"><span></span><span></span></div>
       <header class="mission-header">
-        <h1>Mount Sharp field plan</h1>
-        <div class="mission-meta"><span>Gale Crater</span><span>5 × 5 km survey</span><span>3 targets</span></div>
+        <h1 id="site-name">Mars field plan</h1>
+        <div class="mission-meta"><span id="site-region">Real NASA data</span><span>3 targets</span></div>
       </header>
-      <div class="banner"><span class="status-dot"></span>Prototype on synthetic placeholder terrain</div>
+      <div class="banner"><span class="status-dot"></span>Real DEM + CTX imagery · placeholder habitat and targets · dose, radiation and walking speed are assumptions</div>
 
       <section class="control-section">
+        <label class="site-picker" for="site-select"><span>Site</span><select id="site-select">
+          <option value="site1">Gale crater floor</option>
+          <option value="site2">Southern box</option>
+        </select></label>
         <div class="section-heading">
           <h2>Layers</h2>
         </div>
         <label class="layer-row"><input id="terrain-toggle" type="checkbox" checked>
-          <span class="layer-name"><i class="layer-mark terrain-mark"></i>Terrain</span><input id="terrain-opacity" aria-label="Terrain opacity" type="range" min="0" max="1" step="0.05" value="0.9"></label>
-        <label class="layer-row"><input id="minerals-toggle" type="checkbox" checked>
-          <span class="layer-name"><i class="layer-mark minerals-mark"></i>Mineral proxy</span><input id="minerals-opacity" aria-label="Mineral proxy opacity" type="range" min="0" max="1" step="0.05" value="0.35"></label>
+          <span class="layer-name"><i class="layer-mark terrain-mark"></i>Elevation</span><input id="terrain-opacity" aria-label="Elevation opacity" type="range" min="0" max="1" step="0.05" value="0.9"></label>
+        <label class="layer-row"><input id="imagery-toggle" type="checkbox" checked>
+          <span class="layer-name"><i class="layer-mark imagery-mark"></i>CTX imagery</span><input id="imagery-opacity" aria-label="Imagery opacity" type="range" min="0" max="1" step="0.05" value="0.65"></label>
         <label class="layer-row"><input id="slope-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark slope-mark"></i>Slope</span><input id="slope-opacity" aria-label="Slope opacity" type="range" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="layer-row"><input id="hazard-toggle" type="checkbox" checked>
@@ -51,7 +55,7 @@
       <section class="legend control-section">
         <h2>Legend</h2>
         <div class="legend-item"><span class="swatch hazard-swatch"></span>Too steep</div>
-        <div class="legend-item"><span class="swatch minerals-swatch"></span>Mineral proxy zones</div>
+        <div class="legend-item"><span class="swatch imagery-swatch"></span>CTX imagery</div>
         <div class="legend-item"><span class="swatch outbound-swatch"></span> Outbound</div>
         <div class="legend-item"><span class="swatch return-swatch"></span> Return</div>
         <div class="legend-item"><span class="swatch target-swatch"></span> Targets</div>
@@ -59,7 +63,7 @@
           <div class="slope-key-bar"></div>
           <div class="slope-key-labels"><span>0°</span><span id="slope-limit">15°+</span></div>
         </div>
-        <p>Red cells exceed the walkable slope setting. All terrain and targets are synthetic placeholders.</p>
+        <p>Red cells exceed the slope or roughness setting. DEM and imagery are real; habitat, targets, dose, radiation and walking speed remain placeholders or assumptions.</p>
         <p id="coordinate-readout" class="coordinate-readout">Move over the grid for coordinates.</p>
         <p id="load-status" class="load-status">Loading processed layers...</p>
       </section>

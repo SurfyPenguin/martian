@@ -30,6 +30,9 @@ h1 { font-size: 22px; letter-spacing: -.06em; line-height: 1.08; margin: 0 0 14p
 .mission-meta span { border: 1px solid #343434; border-radius: 999px; padding: 4px 7px; }
 .banner { display: flex; align-items: center; gap: 8px; border: 1px solid #383838; background: #1b1b1b; color: #ddd; padding: 10px 11px; border-radius: 8px; font-size: 10px; line-height: 1.35; margin-top: 20px; }
 .status-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 3px rgba(195, 173, 255, .1); }
+.site-picker { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.site-picker select { min-width: 0; flex: 1; background: #111; border: 1px solid #3b3b3b; color: #f2f2f2; padding: 7px 8px; font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; }
+.site-picker select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .control-section { border: 0; background: transparent; border-radius: 0; padding: 0; margin-top: 26px; }
 .section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 h2 { color: #d7d7d7; font-size: 10px; letter-spacing: .08em; text-transform: lowercase; margin: 0 0 10px; }
@@ -41,6 +44,7 @@ h2 { color: #d7d7d7; font-size: 10px; letter-spacing: .08em; text-transform: low
 .layer-mark { width: 8px; height: 8px; display: inline-block; border-radius: 2px; background: var(--cyan); }
 .slope-mark { background: #14b8a6; }
 .terrain-mark { background: #8e7656; }
+.imagery-mark { background: #577c88; }
 .minerals-mark { background: #8f789f; }
 .hazard-mark { background: var(--red); }
 .route-mark { background: var(--amber); }
@@ -57,6 +61,7 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .swatch { display: inline-block; width: 18px; height: 8px; margin-right: 7px; border-radius: 2px; vertical-align: middle; }
 .hazard-swatch { background: #ef4444; }
 .minerals-swatch { background: linear-gradient(90deg, #77608e 0 33%, #9d7d44 33% 66%, #437576 66%); }
+.imagery-swatch { background: #577c88; }
 .outbound-swatch { background: repeating-linear-gradient(90deg, #fbbf24 0 7px, transparent 7px 11px); }
 .return-swatch { background: #68e1fd; }
 .target-swatch { background: #fbbf24; border-radius: 50%; width: 10px; height: 10px; margin-left: 4px; margin-right: 11px; }
