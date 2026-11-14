@@ -63,6 +63,35 @@ function setLayerOpacity(layer, value) {
   }
 }
 
+function addScaleBar(map, grid) {
+  const control = L.control({ position: "bottomleft" });
+  control.onAdd = () => {
+    const element = L.DomUtil.create("div", "map-scale");
+    const update = () => {
+      const desiredKm = 1;
+      const gridWidth = desiredKm * 1000 / grid.cell_size_m.x;
+      const start = map.latLngToContainerPoint([0, 0]);
+      const end = map.latLngToContainerPoint([0, gridWidth]);
+      element.style.width = `${Math.max(40, end.x - start.x)}px`;
+      element.textContent = `${desiredKm} km`;
+    };
+    map.on("zoomend moveend", update);
+    update();
+    return element;
+  };
+  control.addTo(map);
+}
+
+function addNorthArrow(map) {
+  const control = L.control({ position: "topright" });
+  control.onAdd = () => {
+    const element = L.DomUtil.create("div", "north-arrow");
+    element.innerHTML = "<span class=\"north-arrow-mark\"></span><small>N</small>";
+    return element;
+  };
+  control.addTo(map);
+}
+
 async function loadPlanner() {
   const [stats, grid] = await Promise.all([
     fetch(`${DATA_ROOT}stats.json`).then((response) => response.json()),
@@ -82,6 +111,8 @@ async function loadPlanner() {
   console.info("Route endpoints (row, col):", grid.route_pixels[0],
     grid.route_pixels.at(-1));
   window.map.fitBounds(bounds, { padding: [24, 24] });
+  addScaleBar(window.map, grid);
+  addNorthArrow(window.map);
 
   layers.slope = makeRasterOverlay(grid, "slope", bounds).addTo(window.map);
   layers.hazard = makeRasterOverlay(grid, "hazard", bounds).addTo(window.map);
@@ -90,10 +121,10 @@ async function loadPlanner() {
   const returnPixels = grid.route_segments.at(-1);
   layers.route = L.layerGroup([
     L.polyline(outboundPixels.map(gridToLeaflet), {
-      color: "#68e1fd", weight: 5, opacity: 1,
+      color: "#fbbf24", weight: 4, opacity: 1, dashArray: "8 8",
     }),
     L.polyline(returnPixels.map(gridToLeaflet), {
-      color: "#fbbf24", weight: 4, opacity: 1, dashArray: "8 8",
+      color: "#68e1fd", weight: 5, opacity: 1,
     }),
   ]).addTo(window.map);
   layers.targets = L.layerGroup();
@@ -102,14 +133,29 @@ async function loadPlanner() {
       radius: 8, color: "#fbbf24", fillColor: "#fbbf24", fillOpacity: 1,
     });
     const label = `Target ${target.id.split("-")[1]}`;
-    marker.bindTooltip(label);
+    const leg = grid.legs.find((item) => item.name === target.id);
+    marker.bindTooltip(
+      `${label} · ${leg.distance_km.toFixed(3)} km · ${leg.time_h.toFixed(3)} h`,
+    );
     marker.bindPopup(`<strong>${label}</strong><div class="photo-slot">PLACEHOLDER PHOTO<br>surface preview</div>`);
     marker.addTo(layers.targets);
   });
   L.circleMarker(gridToLeaflet([grid.habitat.row, grid.habitat.col]), {
     radius: 7, color: "#fff", fillColor: "#68e1fd", fillOpacity: 1,
-  }).bindTooltip("Habitat").bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(layers.targets);
+  }).bindTooltip(`Habitat · return ${grid.legs.at(-1).distance_km.toFixed(3)} km · ${grid.legs.at(-1).time_h.toFixed(3)} h`)
+    .bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(layers.targets);
   layers.targets.addTo(window.map);
+
+  window.map.on("mousemove", (event) => {
+    const eastKm = (event.latlng.lng - grid.habitat.col) * grid.cell_size_m.x / 1000;
+    const northKm = (event.latlng.lat - gridToLeaflet([grid.habitat.row, 0])[0])
+      * grid.cell_size_m.y / 1000;
+    const rangeKm = Math.hypot(eastKm, northKm);
+    document.getElementById("coordinate-readout").textContent =
+      `From Habitat: E ${eastKm >= 0 ? "+" : ""}${eastKm.toFixed(2)} km · `
+      + `N ${northKm >= 0 ? "+" : ""}${northKm.toFixed(2)} km · `
+      + `${rangeKm.toFixed(2)} km`;
+  });
 
   document.getElementById("distance").textContent = formatNumber(stats.distance_km, "km", 3);
   document.getElementById("time").textContent = formatNumber(stats.time_h, "h", 3);

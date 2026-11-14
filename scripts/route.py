@@ -139,6 +139,22 @@ def main() -> None:
         {"id": f"target-{index + 1}", "row": row, "col": col}
         for index, (row, col) in enumerate(SCIENCE_TARGET_PIXELS)
     ]
+    leg_stats = []
+    for index, segment in enumerate(route_segments):
+        segment_distance_km = sum(
+            math.hypot(
+                (segment[step + 1][0] - segment[step][0]) * y_size_m,
+                (segment[step + 1][1] - segment[step][1]) * x_size_m,
+            )
+            for step in range(len(segment) - 1)
+        ) / 1000
+        leg_stats.append(
+            {
+                "name": "return" if index == len(route_segments) - 1 else f"target-{index + 1}",
+                "distance_km": round(segment_distance_km, 3),
+                "time_h": round(segment_distance_km / WALKING_SPEED_KMH, 3),
+            }
+        )
     stats = {
         "data_status": PLACEHOLDER_STATUS,
         "distance_km": round(distance_km, 3),
@@ -152,11 +168,13 @@ def main() -> None:
         "rows": rows,
         "cols": cols,
         "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
+        "cell_size_m": {"x": x_size_m, "y": y_size_m},
         "slope_deg": np.round(slope_deg, 3).tolist(),
         "walkable": walkable.tolist(),
         "route_pixels": route_pixels,
         "route_segments": route_segments,
         "targets": targets,
+        "legs": leg_stats,
         "habitat": {"row": HABITAT_PIXEL[0], "col": HABITAT_PIXEL[1]},
     }
     geojson = {
