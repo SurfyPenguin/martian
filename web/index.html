@@ -78,14 +78,19 @@
             <strong id="checkpoint-summary">Real route · loading details</strong>
           </div>
           <button id="checkpoint-toggle" class="checkpoint-toggle" type="button"
-            aria-expanded="true" aria-controls="checkpoint-details">Hide details <i></i></button>
+            aria-expanded="true" aria-controls="checkpoint-details">Collapse <i></i></button>
         </div>
-        <div class="checkpoint-track">
-          <div class="checkpoint checkpoint-start"><i></i><span>Habitat</span></div>
-          <div class="checkpoint"><i></i><span>T1</span></div>
-          <div class="checkpoint"><i></i><span>T2</span></div>
-          <div class="checkpoint"><i></i><span>T3</span></div>
-          <div class="checkpoint checkpoint-end"><i></i><span>Habitat</span></div>
+        <div id="checkpoint-track" class="checkpoint-track" aria-label="Clickable mission checkpoints">
+          <button class="checkpoint checkpoint-start" type="button" data-checkpoint="habitat"
+            aria-label="Jump to Habitat departure point"><i></i><span>Habitat</span></button>
+          <button class="checkpoint" type="button" data-checkpoint="target-1"
+            aria-label="Jump to Target 1"><i></i><span>T1</span></button>
+          <button class="checkpoint" type="button" data-checkpoint="target-2"
+            aria-label="Jump to Target 2"><i></i><span>T2</span></button>
+          <button class="checkpoint" type="button" data-checkpoint="target-3"
+            aria-label="Jump to Target 3"><i></i><span>T3</span></button>
+          <button class="checkpoint checkpoint-end" type="button" data-checkpoint="return"
+            aria-label="Jump to Habitat return point"><i></i><span>Habitat</span></button>
         </div>
         <div id="checkpoint-details" class="checkpoint-details">
           <div id="checkpoint-leg-list"></div>

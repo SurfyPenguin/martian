@@ -52,6 +52,8 @@
 - Setup steps documented in README
 - Replaced the checkpoint strip with a collapsible mission top bar showing
   route totals, return margin, checkpoint coordinates, and per-leg distance/time
+- Added a compact collapsed checkpoint control and clickable Habitat/target
+  stops that fly the map to the selected coordinate
 - Replaced zoom presets with an inline zoom percentage slider
 - Improved terrain inspector hierarchy and kept it clear of map zoom controls
 

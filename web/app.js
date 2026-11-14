@@ -194,6 +194,19 @@ function renderCheckpointDetails(grid, stats) {
   }).join("");
 }
 
+function jumpToCheckpoint(checkpointId) {
+  if (!window.grid) return;
+  const point = checkpointId === "habitat" || checkpointId === "return"
+    ? window.grid.habitat
+    : window.grid.targets.find((target) => target.id === checkpointId);
+  if (!point) return;
+  const zoom = Math.min(window.map.getMaxZoom(), window.mapMinZoom + 3);
+  window.map.flyTo(gridToLeaflet([point.row, point.col]), zoom, { duration: 0.45 });
+  document.querySelectorAll(".checkpoint").forEach((checkpoint) => {
+    checkpoint.classList.toggle("is-selected", checkpoint.dataset.checkpoint === checkpointId);
+  });
+}
+
 async function loadSite(site) {
   const root = `/data/processed/${site}/`;
   const [stats, grid] = await Promise.all([
@@ -311,12 +324,15 @@ async function loadPlanner() {
   setLayerControl("targets", "targets-toggle", "targets-opacity");
   const checkpointToggle = document.getElementById("checkpoint-toggle");
   checkpointToggle.addEventListener("click", () => {
-    const details = document.getElementById("checkpoint-details");
-    const expanded = checkpointToggle.getAttribute("aria-expanded") === "true";
-    checkpointToggle.setAttribute("aria-expanded", String(!expanded));
-    checkpointToggle.innerHTML = `${expanded ? "Show details" : "Hide details"} <i></i>`;
-    document.querySelector(".map-route-chip").classList.toggle("is-expanded", !expanded);
-    details.hidden = expanded;
+    const chip = document.querySelector(".map-route-chip");
+    const expanded = chip.classList.toggle("is-expanded");
+    chip.classList.toggle("is-collapsed", !expanded);
+    checkpointToggle.setAttribute("aria-expanded", String(expanded));
+    checkpointToggle.innerHTML = `${expanded ? "Collapse" : "Expand"} <i></i>`;
+  });
+  document.getElementById("checkpoint-track").addEventListener("click", (event) => {
+    const checkpoint = event.target.closest(".checkpoint");
+    if (checkpoint) jumpToCheckpoint(checkpoint.dataset.checkpoint);
   });
   window.map.on("mousemove", (event) => {
     if (!window.grid) return;
