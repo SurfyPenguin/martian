@@ -62,6 +62,10 @@
 - Reprojected CTX imagery onto each DEM transform before browser export
 - Added provenance caveats, aligned the current project plan, and added a favicon
 - Renamed slope variables to `slope_deg` and clarified the slope/roughness legend
+- Refined the checkpoint control into a compact cobalt-style top bar with a
+  clear expand/collapse state
+- Replaced the floating terrain inspector card with a small bottom coordinate
+  status bar showing latitude, longitude, grid position, and habitat range
 
 ## In progress
 (nothing)

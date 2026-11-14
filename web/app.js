@@ -170,6 +170,23 @@ function inspectCell(grid, latlng) {
   };
 }
 
+function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm } = {}) {
+  const status = document.getElementById("map-inspector");
+  if (!latitude) {
+    status.innerHTML =
+      '<span class="statusbar-label">COORDINATES</span>'
+      + '<strong class="statusbar-coordinate">LAT --° · LON --°</strong>'
+      + '<span class="statusbar-grid">GRID --</span>'
+      + '<span class="statusbar-distance">FROM HABITAT --</span>';
+    return;
+  }
+  status.innerHTML =
+    '<span class="statusbar-label">COORDINATES</span>'
+    + `<strong class="statusbar-coordinate">LAT ${latitude}° · LON ${longitude}°</strong>`
+    + `<span class="statusbar-grid">GRID ${row}, ${col}</span>`
+    + `<span class="statusbar-distance">FROM HABITAT ${rangeKm.toFixed(2)} KM</span>`;
+}
+
 function renderCheckpointDetails(grid, stats) {
   const points = [
     { label: "Habitat", point: grid.habitat, leg: null },
@@ -226,10 +243,7 @@ async function loadSite(site) {
   document.getElementById("site-select").value = site;
   document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
   renderCheckpointDetails(grid, stats);
-  document.getElementById("map-inspector").innerHTML =
-    "<span class=\"inspector-kicker\">TERRAIN INSPECTOR</span>"
-    + "<strong class=\"inspector-coordinate\">SITE READY</strong>"
-    + "<span class=\"inspector-terrain\">Move over the real DEM and imagery</span>";
+  renderCoordinateStatus();
 
   layers.terrain = makeImageOverlay(grid.layer_paths.elevation, bounds, "terrain-pane").addTo(window.map);
   layers.imagery = makeImageOverlay(grid.layer_paths.imagery, bounds, "imagery-pane").addTo(window.map);
@@ -346,11 +360,13 @@ async function loadPlanner() {
     const longitude = cell.latLon.lon.toFixed(5);
     document.getElementById("coordinate-readout").textContent =
       `Lat ${latitude} · Lon ${longitude}`;
-    document.getElementById("map-inspector").innerHTML =
-      "<span class=\"inspector-kicker\">TERRAIN INSPECTOR</span>"
-      + `<strong class="inspector-coordinate">${latitude}°, ${longitude}°</strong>`
-      + `<span class="inspector-terrain">Grid ${cell.row}, ${cell.col} · real elevation layer</span>`
-      + `<span class="inspector-distance">From Habitat: ${rangeKm.toFixed(2)} km</span>`;
+    renderCoordinateStatus({
+      latitude,
+      longitude,
+      row: cell.row,
+      col: cell.col,
+      rangeKm,
+    });
   });
   await loadSite(siteSelect.value);
   addScaleBar(window.map, window.grid);

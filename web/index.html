@@ -72,14 +72,14 @@
     <button class="sidebar-resizer" type="button" aria-label="Resize sidebar"
         title="Drag to resize sidebar"></button>
     <div id="map" aria-label="Mars EVA planning map">
-      <section class="map-route-chip is-expanded" aria-label="Mission checkpoints">
+      <section class="map-route-chip is-collapsed" aria-label="Mission checkpoints">
         <div class="checkpoint-bar-header">
           <div>
             <span class="route-chip-kicker">MISSION CHECKPOINTS</span>
             <strong id="checkpoint-summary">Real route · loading details</strong>
           </div>
           <button id="checkpoint-toggle" class="checkpoint-toggle" type="button"
-            aria-expanded="true" aria-controls="checkpoint-details">Collapse <i></i></button>
+            aria-expanded="false" aria-controls="checkpoint-details">Expand <i></i></button>
         </div>
         <div id="checkpoint-track" class="checkpoint-track" aria-label="Clickable mission checkpoints">
           <button class="checkpoint checkpoint-start" type="button" data-checkpoint="habitat"
@@ -98,9 +98,11 @@
           <span class="checkpoint-note">Coordinates are placeholder mission points.</span>
         </div>
       </section>
-      <div id="map-inspector" class="map-inspector">
-        <span class="inspector-kicker">TERRAIN INSPECTOR</span>
-        Move over terrain to inspect
+      <div id="map-inspector" class="map-inspector" aria-live="polite">
+        <span class="statusbar-label">COORDINATES</span>
+        <strong class="statusbar-coordinate">LAT --° · LON --°</strong>
+        <span class="statusbar-grid">GRID --</span>
+        <span class="statusbar-distance">FROM HABITAT --</span>
       </div>
     </div>
   </main>

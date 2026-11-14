@@ -89,14 +89,15 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111; color: #f2f2f2; }
 .photo-slot { border: 1px dashed var(--amber); color: var(--amber); margin-top: 8px; padding: 16px 10px; text-align: center; font-size: 11px; }
 .map-route-chip, .map-inspector, .map-action { background: #111; border: 1px solid #3b3b3b; color: #f2f2f2; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
-.map-route-chip { position: absolute; z-index: 500; top: 18px; left: 18px; width: min(700px, calc(100% - 36px)); padding: 13px 15px 14px; border-radius: 6px; font-size: 12px; transition: width .2s ease, padding .2s ease; }
-.map-route-chip.is-collapsed { width: auto; padding: 8px 10px; }
-.checkpoint-bar-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; }
+.map-route-chip { position: absolute; z-index: 500; top: 14px; left: 50%; width: min(820px, calc(100% - 32px)); padding: 7px 8px 8px; border-radius: 9px; font-size: 12px; transform: translateX(-50%); transition: width .2s ease, padding .2s ease; }
+.map-route-chip.is-collapsed { width: auto; padding: 6px; }
+.checkpoint-bar-header { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
 .is-collapsed .checkpoint-bar-header { align-items: center; }
 .is-collapsed .checkpoint-bar-header > div { display: none; }
-.route-chip-kicker { display: block; color: #9c8bd0; font-size: 9px; font-weight: 800; letter-spacing: .12em; }
-.checkpoint-bar-header strong { display: block; margin-top: 5px; color: #f2f2f2; font-size: 12px; font-weight: 600; letter-spacing: -.02em; }
-.checkpoint-toggle { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; border: 1px solid #444; background: #181818; color: #bdbdbd; padding: 6px 8px; font: inherit; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.is-collapsed .checkpoint-track, .is-collapsed .checkpoint-details { display: none; }
+.route-chip-kicker { display: block; color: #9c8bd0; font-size: 8px; font-weight: 800; letter-spacing: .14em; }
+.checkpoint-bar-header strong { display: block; margin-top: 3px; color: #f2f2f2; font-size: 11px; font-weight: 600; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+.checkpoint-toggle { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; border: 1px solid #444; border-radius: 5px; background: #181818; color: #bdbdbd; padding: 6px 8px; font: inherit; font-size: 8px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
 .is-collapsed .checkpoint-toggle::before { content: "CHECKPOINTS"; color: #9c8bd0; margin-right: 4px; }
 .checkpoint-toggle i { width: 6px; height: 6px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(225deg) translateY(-1px); }
 .is-collapsed .checkpoint-toggle i { transform: rotate(45deg) translateY(-1px); }
@@ -119,13 +120,12 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .checkpoint-detail-meta { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.4; font-variant-numeric: tabular-nums; }
 .checkpoint-detail-coord { display: block; margin-top: 2px; color: #777; font-size: 9px; font-variant-numeric: tabular-nums; }
 .checkpoint-note { display: block; margin-top: 11px; color: #777; font-size: 9px; }
-.map-inspector { position: absolute; z-index: 500; right: 18px; bottom: 92px; min-width: 250px; max-width: min(330px, calc(100% - 36px)); padding: 11px 13px 12px; border-radius: 6px; font-size: 12px; line-height: 1.35; pointer-events: none; }
-.map-inspector strong, .map-inspector span { display: block; }
-.map-inspector strong { color: #fff; font-size: 14px; font-weight: 700; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
-.map-inspector span { color: var(--muted); font-size: 11px; margin-top: 5px; }
-.map-inspector .inspector-kicker { color: #9c8bd0; margin: 0 0 7px; font-size: 8px; font-weight: 800; letter-spacing: .12em; }
-.map-inspector .inspector-terrain { color: #d7d7d7; }
-.map-inspector .inspector-distance { color: #d7d7d7; }
+.map-inspector { position: absolute; z-index: 500; left: 50%; bottom: 14px; display: flex; align-items: center; gap: 11px; max-width: calc(100% - 36px); padding: 6px 9px; border-radius: 5px; font-size: 9px; line-height: 1; pointer-events: none; transform: translateX(-50%); white-space: nowrap; }
+.map-inspector strong, .map-inspector span { display: inline; margin: 0; }
+.map-inspector .statusbar-label { color: #9c8bd0; font-size: 8px; font-weight: 800; letter-spacing: .13em; }
+.map-inspector .statusbar-coordinate { color: #f2f2f2; font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.map-inspector .statusbar-grid, .map-inspector .statusbar-distance { color: #858585; font-size: 9px; font-variant-numeric: tabular-nums; }
+.map-inspector .statusbar-grid, .map-inspector .statusbar-distance { border-left: 1px solid #3b3b3b; padding-left: 11px; }
 .map-action { cursor: pointer; padding: 8px 10px; font: inherit; font-size: 11px; }
 .map-action:hover { border-color: var(--cyan); color: var(--cyan); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
@@ -140,8 +140,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .sidebar .legend { margin-bottom: 2px; }
   .north-arrow { display: none; }
   .leaflet-top.leaflet-right .map-action { display: none; }
-  .map-route-chip { top: 14px; left: 14px; width: calc(100vw - 28px); }
+  .map-route-chip { top: 14px; }
+  .map-route-chip.is-expanded { width: calc(100vw - 28px); }
   #checkpoint-leg-list { grid-template-columns: repeat(2, 1fr); }
-  .map-inspector { right: 14px; bottom: 90px; min-width: 0; max-width: calc(100vw - 28px); }
+  .map-inspector { bottom: 54px; max-width: calc(100vw - 28px); }
+  .map-inspector .statusbar-distance { display: none; }
   #map { height: 100vh; }
 }
