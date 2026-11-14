@@ -95,7 +95,7 @@ function addScaleBar(map, grid) {
 }
 
 function addNorthArrow(map) {
-  const control = L.control({ position: "topright" });
+  const control = L.control({ position: "bottomright" });
   control.onAdd = () => {
     const element = L.DomUtil.create("div", "north-arrow");
     element.setAttribute("aria-label", "Grid north");
@@ -107,7 +107,7 @@ function addNorthArrow(map) {
 }
 
 function addResetControl(map, bounds) {
-  const control = L.control({ position: "topright" });
+  const control = L.control({ position: "bottomright" });
   control.onAdd = () => {
     const button = L.DomUtil.create("button", "map-action");
     button.type = "button";
@@ -121,7 +121,7 @@ function addResetControl(map, bounds) {
 }
 
 function addZoomPercentageControl(map, minZoom) {
-  const control = L.control({ position: "topright" });
+  const control = L.control({ position: "bottomright" });
   control.onAdd = () => {
     const element = L.DomUtil.create("label", "zoom-percent-control");
     element.innerHTML = "<span>ZOOM</span>";

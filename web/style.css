@@ -83,6 +83,17 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .zoom-percent-control output { color: #f2f2f2; min-width: 37px; text-align: right; font-size: 11px; font-variant-numeric: tabular-nums; letter-spacing: 0; }
 .zoom-percent-control input { grid-column: 1 / -1; width: 100%; accent-color: var(--cyan); cursor: ew-resize; }
 .zoom-percent-control input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.leaflet-bottom.leaflet-right { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; margin: 0 14px 14px 0; }
+.leaflet-bottom.leaflet-right .leaflet-control { float: none; margin: 0; }
+.leaflet-bottom.leaflet-right .zoom-percent-control { order: 1; }
+.leaflet-bottom.leaflet-right .map-action { order: 2; }
+.leaflet-bottom.leaflet-right .north-arrow { order: 3; }
+.leaflet-bottom.leaflet-right .leaflet-control-zoom { order: 4; }
+.leaflet-control-zoom { display: flex; flex-direction: column; overflow: hidden; border: 1px solid #3b3b3b !important; border-radius: 6px; background: #111; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+.leaflet-control-zoom a { width: 32px; height: 30px; border: 0 !important; background: #111; color: #d7d7d7; font: 700 19px/30px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; transition: background .15s ease, color .15s ease; }
+.leaflet-control-zoom a + a { border-top: 1px solid #303030 !important; }
+.leaflet-control-zoom a:hover, .leaflet-control-zoom a:focus { background: #1b1824; color: var(--cyan); }
+.leaflet-control-zoom a:focus-visible { outline: 2px solid var(--cyan); outline-offset: -3px; }
 .load-status { color: var(--cyan) !important; }
 #map { min-height: 100vh; position: relative; background: #000; }
 .leaflet-container { background: #000; }
@@ -139,11 +150,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .sidebar { position: absolute; width: min(390px, calc(100vw - 24px)); max-height: calc(100vh - 24px); height: auto; margin: 12px; padding: 20px 18px; border: 1px solid #2d2d2d; border-radius: 12px; box-shadow: 0 18px 45px rgba(0, 0, 0, .45); }
   .sidebar .legend { margin-bottom: 2px; }
   .north-arrow { display: none; }
-  .leaflet-top.leaflet-right .map-action { display: none; }
   .map-route-chip { top: 14px; }
   .map-route-chip.is-expanded { width: calc(100vw - 28px); }
   #checkpoint-leg-list { grid-template-columns: repeat(2, 1fr); }
   .map-inspector { bottom: 54px; max-width: calc(100vw - 28px); }
   .map-inspector .statusbar-distance { display: none; }
+  .leaflet-bottom.leaflet-right { margin: 0 10px 10px 0; }
   #map { height: 100vh; }
 }

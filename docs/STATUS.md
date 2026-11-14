@@ -66,6 +66,8 @@
   clear expand/collapse state
 - Replaced the floating terrain inspector card with a small bottom coordinate
   status bar showing latitude, longitude, grid position, and habitat range
+- Moved zoom, zoom percentage, reset view, and grid-north navigation controls
+  into a themed bottom-right control stack
 
 ## In progress
 (nothing)
