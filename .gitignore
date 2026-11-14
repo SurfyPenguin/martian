@@ -1,0 +1,8 @@
+data/raw/
+*.tif
+*.img
+*.IMG
+__pycache__/
+.venv/
+node_modules/
+.DS_Store
