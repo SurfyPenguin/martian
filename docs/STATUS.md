@@ -39,6 +39,8 @@
 - Increased synthetic terrain variance with rolling hills, crater-like
   depression, terrace, fine texture, and an elevation-balanced proxy map
 - Slimmed outbound and return route strokes for a lighter map overlay
+- Clarified the map inspector typography, moved it above zoom controls, and
+  added selectable percentage zoom presets
 - Setup steps documented in README
 
 ## In progress

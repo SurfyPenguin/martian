@@ -187,6 +187,37 @@ function addResetControl(map, bounds) {
   control.addTo(map);
 }
 
+function addZoomPercentageControl(map, minZoom) {
+  const control = L.control({ position: "topright" });
+  control.onAdd = () => {
+    const element = L.DomUtil.create("label", "zoom-percent-control");
+    element.innerHTML = "<span>ZOOM</span>";
+    const select = L.DomUtil.create("select", "", element);
+    [100, 125, 150, 200, 300].forEach((percentage) => {
+      const option = L.DomUtil.create("option", "", select);
+      option.value = percentage;
+      option.textContent = `${percentage}%`;
+    });
+    const sync = () => {
+      const percentage = 100 * (2 ** (map.getZoom() - minZoom));
+      const closest = [100, 125, 150, 200, 300]
+        .reduce((previous, current) => (
+          Math.abs(current - percentage) < Math.abs(previous - percentage)
+            ? current : previous
+        ));
+      select.value = closest;
+    };
+    L.DomEvent.disableClickPropagation(select);
+    L.DomEvent.on(select, "change", () => {
+      map.setZoom(minZoom + Math.log2(Number(select.value) / 100));
+    });
+    map.on("zoomend", sync);
+    sync();
+    return element;
+  };
+  control.addTo(map);
+}
+
 function gridToLatLon(grid, [row, col]) {
   const bounds = grid.geo_reference.bounds;
   const latRatio = (grid.rows - row) / grid.rows;
@@ -244,10 +275,11 @@ async function loadPlanner() {
   addScaleBar(window.map, grid);
   addNorthArrow(window.map);
   addResetControl(window.map, bounds);
+  addZoomPercentageControl(window.map, minZoom);
   const center = gridToLatLon(grid, [grid.rows / 2, grid.cols / 2]);
   document.getElementById("map-inspector").innerHTML =
-    `<strong>${center.lat.toFixed(5)}°, ${center.lon.toFixed(5)}°</strong>`
-    + "<span>Move over terrain to inspect elevation and slope</span>";
+    `<strong class="inspector-coordinate">${center.lat.toFixed(5)}°, ${center.lon.toFixed(5)}°</strong>`
+    + "<span class=\"inspector-terrain\">Move over terrain to inspect elevation and slope</span>";
 
   layers.terrain = makeTerrainOverlay(grid, bounds, "terrain-pane").addTo(window.map);
   layers.minerals = makeMineralOverlay(grid, bounds, "minerals-pane").addTo(window.map);
@@ -308,9 +340,9 @@ async function loadPlanner() {
     document.getElementById("coordinate-readout").textContent =
       `Lat ${latitude} · Lon ${longitude}`;
     document.getElementById("map-inspector").innerHTML =
-      `<strong>${latitude}°, ${longitude}°</strong>`
-      + `<span>${cell.elevation.toFixed(1)} m · ${cell.slope.toFixed(1)}° slope · Proxy zone ${cell.mineral}</span>`
-      + `<span>From Habitat: ${rangeKm.toFixed(2)} km</span>`;
+      `<strong class="inspector-coordinate">${latitude}°, ${longitude}°</strong>`
+      + `<span class="inspector-terrain">${cell.elevation.toFixed(1)} m · ${cell.slope.toFixed(1)}° slope · Proxy zone ${cell.mineral}</span>`
+      + `<span class="inspector-distance">From Habitat: ${rangeKm.toFixed(2)} km</span>`;
   });
 
   document.getElementById("distance").textContent = formatNumber(stats.distance_km, "km", 3);
