@@ -34,6 +34,8 @@
   violet interaction accents, and compact utility controls
 - Replaced the route badge with a restrained checkpoint timeline for the
   Habitat-to-target mission sequence
+- Added a clearly labeled synthetic mineral-proxy layer with toggle, opacity,
+  legend, and inspector zone values; no mineral identifications are claimed
 - Setup steps documented in README
 
 ## In progress

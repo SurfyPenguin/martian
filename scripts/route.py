@@ -126,6 +126,13 @@ def main() -> None:
         x_size_m, y_size_m = cell_size_meters(dem_source)
         rows, cols = walkable.shape
 
+    elevation_norm = (elevation_m - elevation_m.min()) / (
+        elevation_m.max() - elevation_m.min()
+    )
+    mineral_proxy = np.where(
+        elevation_norm < 0.35, 1, np.where(elevation_norm > 0.65, 2, 3)
+    )
+
     points = [HABITAT_PIXEL, *SCIENCE_TARGET_PIXELS, HABITAT_PIXEL]
     route_segments: list[list[tuple[int, int]]] = []
     for start, goal in zip(points, points[1:]):
@@ -186,6 +193,15 @@ def main() -> None:
             "bounds": AOI_BOUNDS,
         },
         "elevation_m": np.round(elevation_m, 2).tolist(),
+        "mineral_proxy_status": (
+            "PLACEHOLDER - synthetic terrain zones, not mineral identifications"
+        ),
+        "mineral_proxy_classes": {
+            "1": "Proxy zone A",
+            "2": "Proxy zone B",
+            "3": "Proxy zone C",
+        },
+        "mineral_proxy": mineral_proxy.tolist(),
         "slope_deg": np.round(slope_deg, 3).tolist(),
         "walkable": walkable.tolist(),
         "route_pixels": route_pixels,

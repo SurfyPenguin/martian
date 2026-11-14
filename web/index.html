@@ -24,6 +24,8 @@
         </div>
         <label class="layer-row"><input id="terrain-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark terrain-mark"></i>Terrain</span><input id="terrain-opacity" aria-label="Terrain opacity" type="range" min="0" max="1" step="0.05" value="0.9"></label>
+        <label class="layer-row"><input id="minerals-toggle" type="checkbox" checked>
+          <span class="layer-name"><i class="layer-mark minerals-mark"></i>Mineral proxy</span><input id="minerals-opacity" aria-label="Mineral proxy opacity" type="range" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="layer-row"><input id="slope-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark slope-mark"></i>Slope</span><input id="slope-opacity" aria-label="Slope opacity" type="range" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="layer-row"><input id="hazard-toggle" type="checkbox" checked>
@@ -49,6 +51,7 @@
       <section class="legend control-section">
         <h2>Legend</h2>
         <div class="legend-item"><span class="swatch hazard-swatch"></span>Too steep</div>
+        <div class="legend-item"><span class="swatch minerals-swatch"></span>Mineral proxy zones</div>
         <div class="legend-item"><span class="swatch outbound-swatch"></span> Outbound</div>
         <div class="legend-item"><span class="swatch return-swatch"></span> Return</div>
         <div class="legend-item"><span class="swatch target-swatch"></span> Targets</div>

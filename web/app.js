@@ -5,6 +5,31 @@ function formatNumber(value, unit, digits = 2) {
   return `${Number(value).toFixed(digits)} ${unit}`;
 }
 
+function makeMineralOverlay(grid, bounds, pane) {
+  const colors = {
+    1: [119, 96, 142],
+    2: [157, 125, 68],
+    3: [67, 117, 118],
+  };
+  const canvas = document.createElement("canvas");
+  canvas.width = grid.cols;
+  canvas.height = grid.rows;
+  const context = canvas.getContext("2d");
+  const pixels = context.createImageData(grid.cols, grid.rows);
+  for (let row = 0; row < grid.rows; row += 1) {
+    for (let col = 0; col < grid.cols; col += 1) {
+      const index = (row * grid.cols + col) * 4;
+      const [red, green, blue] = colors[grid.mineral_proxy[row][col]];
+      pixels.data[index] = red;
+      pixels.data[index + 1] = green;
+      pixels.data[index + 2] = blue;
+      pixels.data[index + 3] = 125;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
+  return L.imageOverlay(canvas.toDataURL(), bounds, { pane });
+}
+
 function gridToLeaflet([row, col]) {
   return [window.grid.rows - row, col];
 }
@@ -180,6 +205,7 @@ function inspectCell(grid, latlng) {
     col,
     latLon: gridToLatLon(grid, [row, col]),
     elevation: grid.elevation_m[row][col],
+    mineral: grid.mineral_proxy[row][col],
     slope: grid.slope_deg[row][col],
   };
 }
@@ -198,6 +224,7 @@ async function loadPlanner() {
   });
   const paneOrder = {
     terrain: 210,
+    minerals: 215,
     slope: 220,
     hazard: 230,
     route: 450,
@@ -223,6 +250,7 @@ async function loadPlanner() {
     + "<span>Move over terrain to inspect elevation and slope</span>";
 
   layers.terrain = makeTerrainOverlay(grid, bounds, "terrain-pane").addTo(window.map);
+  layers.minerals = makeMineralOverlay(grid, bounds, "minerals-pane").addTo(window.map);
   layers.slope = makeRasterOverlay(grid, "slope", bounds, "slope-pane").addTo(window.map);
   layers.hazard = makeRasterOverlay(grid, "hazard", bounds, "hazard-pane").addTo(window.map);
   const outboundPixels = grid.route_segments.slice(0, -1).flatMap((segment, index) =>
@@ -281,7 +309,7 @@ async function loadPlanner() {
       `Lat ${latitude} · Lon ${longitude}`;
     document.getElementById("map-inspector").innerHTML =
       `<strong>${latitude}°, ${longitude}°</strong>`
-      + `<span>${cell.elevation.toFixed(1)} m elevation · ${cell.slope.toFixed(1)}° slope</span>`
+      + `<span>${cell.elevation.toFixed(1)} m · ${cell.slope.toFixed(1)}° slope · Proxy zone ${cell.mineral}</span>`
       + `<span>From Habitat: ${rangeKm.toFixed(2)} km</span>`;
   });
 
@@ -301,6 +329,7 @@ async function loadPlanner() {
   document.getElementById("load-status").textContent = "Layers loaded. All mission points are placeholders.";
 
   setLayerControl("terrain", "terrain-toggle", "terrain-opacity");
+  setLayerControl("minerals", "minerals-toggle", "minerals-opacity");
   setLayerControl("slope", "slope-toggle", "slope-opacity");
   setLayerControl("hazard", "hazard-toggle", "hazard-opacity");
   setLayerControl("route", "route-toggle", "route-opacity");
