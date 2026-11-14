@@ -12,10 +12,11 @@
 - README explains how to run it in under 5 steps
 
 ## Done
-(nothing yet)
+- Added configurable placeholder AOI bounds and labeled EVA planning assumptions.
+- Added a synthetic placeholder DEM generator and documented setup steps.
 
 ## In progress
-(nothing yet)
+Nothing.
 
 ## Next
 1. scripts/slope.py
