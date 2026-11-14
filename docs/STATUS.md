@@ -16,7 +16,8 @@
 - Added a synthetic placeholder DEM generator and documented setup steps.
 
 ## In progress
-Nothing.
+Placeholder-data setup is complete; the slope/route pipeline and web planner
+are not implemented yet.
 
 ## Next
 1. scripts/slope.py

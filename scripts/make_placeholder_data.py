@@ -51,6 +51,11 @@ def main() -> None:
         dataset.update_tags(
             DATA_STATUS="PLACEHOLDER - synthetic DEM, not NASA data",
             DESCRIPTION="Synthetic elevation surface for local pipeline development",
+            COORDINATE_CONVENTION=(
+                "Placeholder Mars geographic coordinates: planetocentric latitude, "
+                "east-positive longitude"
+            ),
+            CRS_STATUS="UNSPECIFIED - no Mars CRS assigned",
         )
 
     print(f"Wrote placeholder DEM: {OUTPUT_PATH}")

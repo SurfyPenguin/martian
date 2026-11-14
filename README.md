@@ -5,6 +5,9 @@ Mount Sharp. The current DEM is explicitly synthetic placeholder data; replace
 it with a documented NASA DEM before using the planner for science or mission
 decisions.
 
+The current setup only generates the placeholder DEM. The slope/route pipeline
+and Leaflet planner described in the project plan are not implemented yet.
+
 ## Run the setup
 
 1. Create and activate a Python 3.11+ virtual environment.

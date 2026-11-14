@@ -1,5 +1,9 @@
 ## Area of interest
-- Center: lat X: -4.64173, lon Y: 137.66 (source: Mars Trek, date)
-- Box: -4.9105, -4.24672, 137.36136, 137.95757
-- Size: ~5 x 5 km
-- Coordinate convention: planetocentric latitude, east-positive longitude
+The AOI is a placeholder for a future Mount Sharp / Gale Crater data
+footprint. It is not a verified NASA data boundary. The canonical placeholder
+bounds are generated in `scripts/config.py`; replace them after selecting and
+documenting a real data source.
+
+Placeholder coordinate convention: planetocentric latitude and east-positive
+longitude. The placeholder GeoTIFF has no assigned CRS and must not be treated
+as a georeferenced NASA product.
