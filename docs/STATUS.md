@@ -41,6 +41,7 @@
 - Slimmed outbound and return route strokes for a lighter map overlay
 - Clarified the map inspector typography, moved it above zoom controls, and
   added selectable percentage zoom presets
+- Reworked the north indicator as a compact grid-north compass
 - Setup steps documented in README
 
 ## In progress

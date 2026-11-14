@@ -57,10 +57,15 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .slope-key-labels { display: flex; justify-content: space-between; margin-top: 4px; }
 .coordinate-readout { font-variant-numeric: tabular-nums; }
 .map-scale { background: #111; border: 1px solid #555; color: #eee; padding: 3px 6px; font-size: 10px; text-align: center; }
-.north-arrow { display: flex; flex-direction: column; align-items: center; background: #111; border: 1px solid #555; color: #eee; padding: 5px 8px; line-height: 1; }
-.north-arrow-mark { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 18px solid var(--cyan); position: relative; }
-.north-arrow-mark::after { content: ""; position: absolute; width: 3px; height: 10px; background: var(--cyan); left: -1.5px; top: 16px; }
-.north-arrow small { font-size: 10px; letter-spacing: .12em; }
+.north-arrow { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 56px; background: #111; border: 1px solid #555; color: #eee; padding: 6px 7px 7px; line-height: 1; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+.north-arrow-label { color: #9c8bd0; font-size: 7px; font-weight: 700; letter-spacing: .12em; white-space: nowrap; }
+.north-arrow-compass { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #555; border-radius: 50%; background: #171717; }
+.north-arrow-compass::before, .north-arrow-compass::after { content: ""; position: absolute; background: #3d3d3d; }
+.north-arrow-compass::before { width: 22px; height: 1px; }
+.north-arrow-compass::after { width: 1px; height: 22px; }
+.north-arrow-compass i { position: absolute; top: 3px; left: 50%; width: 2px; height: 12px; background: var(--cyan); transform: translateX(-50%); }
+.north-arrow-compass i::before { content: ""; position: absolute; top: -3px; left: -4px; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 7px solid var(--cyan); }
+.north-arrow-compass b { position: relative; z-index: 1; margin-top: 20px; color: #f2f2f2; font-size: 8px; font-weight: 700; letter-spacing: .08em; }
 .zoom-percent-control { display: flex; align-items: center; gap: 7px; background: #111; border: 1px solid #555; color: var(--muted); padding: 5px 7px; font-size: 9px; letter-spacing: .08em; }
 .zoom-percent-control select { background: #111; border: 0; color: #f2f2f2; font: inherit; font-size: 11px; cursor: pointer; }
 .zoom-percent-control select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }

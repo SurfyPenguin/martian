@@ -167,7 +167,9 @@ function addNorthArrow(map) {
   const control = L.control({ position: "topright" });
   control.onAdd = () => {
     const element = L.DomUtil.create("div", "north-arrow");
-    element.innerHTML = "<span class=\"north-arrow-mark\"></span><small>N</small>";
+    element.setAttribute("aria-label", "Grid north");
+    element.innerHTML = "<span class=\"north-arrow-label\">GRID NORTH</span>"
+      + "<span class=\"north-arrow-compass\"><i></i><b>N</b></span>";
     return element;
   };
   control.addTo(map);
