@@ -30,6 +30,8 @@
   map reset/leg interactions, and a lat/lon/elevation/slope inspector
 - Fixed layer stacking when toggling terrain and added high-contrast route
   casings with clearer outbound/return leg graphics
+- Restyled the planner with a cobalt-inspired monochrome dark console,
+  violet interaction accents, and compact utility controls
 - Setup steps documented in README
 
 ## In progress
