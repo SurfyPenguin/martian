@@ -62,7 +62,16 @@
       </section>
     </aside>
     <div id="map" aria-label="Mars EVA planning map">
-      <div class="map-route-chip"><span class="route-chip-kicker">CURRENT EVA</span><strong>Habitat → T1 → T2 → T3 → Habitat</strong></div>
+      <div class="map-route-chip" aria-label="Mission checkpoints">
+        <span class="route-chip-kicker">MISSION CHECKPOINTS</span>
+        <div class="checkpoint-track">
+          <div class="checkpoint checkpoint-start"><i></i><span>Habitat</span></div>
+          <div class="checkpoint"><i></i><span>T1</span></div>
+          <div class="checkpoint"><i></i><span>T2</span></div>
+          <div class="checkpoint"><i></i><span>T3</span></div>
+          <div class="checkpoint checkpoint-end"><i></i><span>Habitat</span></div>
+        </div>
+      </div>
       <div id="map-inspector" class="map-inspector">Move over terrain to inspect</div>
     </div>
   </main>

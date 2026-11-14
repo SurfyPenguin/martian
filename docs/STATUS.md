@@ -32,6 +32,8 @@
   casings with clearer outbound/return leg graphics
 - Restyled the planner with a cobalt-inspired monochrome dark console,
   violet interaction accents, and compact utility controls
+- Replaced the route badge with a restrained checkpoint timeline for the
+  Habitat-to-target mission sequence
 - Setup steps documented in README
 
 ## In progress
