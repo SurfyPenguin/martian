@@ -9,11 +9,22 @@ function readRouteGrid(site) {
   const directory = path.join(root, "web", "data", site);
   const metadata = JSON.parse(fs.readFileSync(path.join(directory, "cost.json"), "utf8"));
   const binary = fs.readFileSync(path.join(directory, "cost.bin"));
-  const buffer = binary.buffer.slice(
-    binary.byteOffset,
-    binary.byteOffset + binary.byteLength,
+  const clearanceCells = fs.readFileSync(
+    path.join(directory, metadata.clearance_files.cells),
   );
-  return RoutePlanner.decodeGrid(metadata, buffer);
+  const clearanceMeters = fs.readFileSync(
+    path.join(directory, metadata.clearance_files.meters),
+  );
+  const toArrayBuffer = (bytes) => bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  );
+  return RoutePlanner.decodeGrid(
+    metadata,
+    toArrayBuffer(binary),
+    toArrayBuffer(clearanceCells),
+    toArrayBuffer(clearanceMeters),
+  );
 }
 
 function checkSite(siteKey) {
@@ -47,7 +58,12 @@ function checkSite(siteKey) {
       `${siteKey} leg ${index + 1} differs by ${(difference * 100).toFixed(2)}%`,
     );
     assert.ok(
-      pathCells.every(([row, col]) => costGrid.costs[row * costGrid.cols + col] >= 0),
+      pathCells.every(([row, col]) => RoutePlanner.isWalkable(
+        costGrid,
+        row,
+        col,
+        costGrid.parameters.safety_margin_cells,
+      )),
       `${siteKey} leg ${index + 1} crosses an impassable cell`,
     );
     console.log(
@@ -63,20 +79,26 @@ function checkAStarEdges() {
     rows: 5,
     cols: 5,
     costs: new Float32Array(25).fill(1),
+    clearanceCells: new Float32Array(25).fill(10),
+    clearanceMeters: new Float32Array(25).fill(10),
     cellSizeM: { x: 1, y: 1 },
     parameters: {
+      safety_margin_cells: 2,
       walking_speed_kmh: 1,
       eva_hours: 4,
       dose_rate_msv_per_hour: 0.02,
     },
   });
   const grid = makeGrid();
-  for (let row = 0; row < 4; row += 1) grid.costs[row * 5 + 2] = -1;
+  for (let row = 0; row < 4; row += 1) {
+    grid.costs[row * 5 + 2] = Infinity;
+    grid.clearanceCells[row * 5 + 2] = 0;
+  }
   const detour = RoutePlanner.astar(grid, [0, 0], [0, 4]);
   assert.ok(detour.some(([row, col]) => row === 4 && col === 2));
-  assert.ok(detour.every(([row, col]) => grid.costs[row * 5 + col] >= 0));
+  assert.ok(detour.every(([row, col]) => RoutePlanner.isWalkable(grid, row, col)));
 
-  for (let row = 0; row < 5; row += 1) grid.costs[row * 5 + 2] = -1;
+  for (let row = 0; row < 5; row += 1) grid.costs[row * 5 + 2] = Infinity;
   assert.throws(
     () => RoutePlanner.astar(grid, [0, 0], [0, 4]),
     RoutePlanner.NoRouteError,

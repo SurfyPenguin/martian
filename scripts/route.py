@@ -9,19 +9,30 @@ import numpy as np
 import rasterio
 
 from config import (
+    CLEARANCE_COST_RADIUS_CELLS,
+    CLEARANCE_COST_WEIGHT,
+    ALTERNATE_ROUTE_COST_MULTIPLIER,
+    ALTERNATE_ROUTE_CORRIDOR_CELLS,
+    ALTERNATE_ROUTE_MAX_OVERLAP,
+    ALTERNATE_ROUTE_MAX_TIME_FACTOR,
+    ALTERNATE_ROUTE_MIN_LEG_CELLS,
     DOSE_RATE_MSV_PER_HOUR,
     EVA_HOURS,
     MAX_ROUGHNESS_M,
     MAX_WALKABLE_SLOPE_DEG,
     PROJECT_ROOT,
     ROUGHNESS_COST_WEIGHT,
+    SAFER_CLEARANCE_COST_WEIGHT,
+    SAFETY_MARGIN_CELLS,
     SLOPE_COST_POWER,
+    WEIGHTED_ASTAR_EPSILON,
     WALKING_SPEED_KMH,
     SITES,
     site_config,
     site_output_dir,
 )
 from slope import cell_size_meters
+from rasterio.transform import rowcol, xy
 
 
 def neighbours(row: int, col: int, rows: int, cols: int):
@@ -35,12 +46,130 @@ def neighbours(row: int, col: int, rows: int, cols: int):
                 yield next_row, next_col
 
 
+def _distance_transform_1d(costs: np.ndarray, spacing: float) -> np.ndarray:
+    """Return exact squared distances to finite sites along one axis."""
+    finite_sites = np.flatnonzero(np.isfinite(costs))
+    result = np.full(costs.shape, np.inf, dtype="float64")
+    if finite_sites.size == 0:
+        return result
+
+    spacing_squared = spacing * spacing
+    sites = np.empty(finite_sites.size, dtype="int32")
+    boundaries = np.empty(finite_sites.size + 1, dtype="float64")
+    envelope = 0
+    sites[0] = finite_sites[0]
+    boundaries[0] = -np.inf
+    boundaries[1] = np.inf
+    for candidate in finite_sites[1:]:
+        intersection = (
+            costs[candidate] + spacing_squared * candidate * candidate
+            - costs[sites[envelope]]
+            - spacing_squared * sites[envelope] * sites[envelope]
+        ) / (2 * spacing_squared * (candidate - sites[envelope]))
+        while intersection <= boundaries[envelope]:
+            envelope -= 1
+            intersection = (
+                costs[candidate] + spacing_squared * candidate * candidate
+                - costs[sites[envelope]]
+                - spacing_squared * sites[envelope] * sites[envelope]
+            ) / (2 * spacing_squared * (candidate - sites[envelope]))
+        envelope += 1
+        sites[envelope] = candidate
+        boundaries[envelope] = intersection
+        boundaries[envelope + 1] = np.inf
+
+    envelope = 0
+    for coordinate in range(costs.size):
+        while boundaries[envelope + 1] < coordinate:
+            envelope += 1
+        offset = (coordinate - sites[envelope]) * spacing
+        result[coordinate] = offset * offset + costs[sites[envelope]]
+    return result
+
+
+def distance_to_hazards(
+    hazard_mask: np.ndarray,
+    x_size_m: float,
+    y_size_m: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute Euclidean clearance in cells and meters from the hazard mask."""
+    if hazard_mask.ndim != 2:
+        raise ValueError("Hazard mask must be a two-dimensional array")
+    if not np.any(hazard_mask):
+        shape = hazard_mask.shape
+        return (
+            np.full(shape, np.inf, dtype="float32"),
+            np.full(shape, np.inf, dtype="float32"),
+        )
+
+    def transform(x_spacing: float, y_spacing: float) -> np.ndarray:
+        horizontal_squared = np.empty(hazard_mask.shape, dtype="float64")
+        for row in range(hazard_mask.shape[0]):
+            horizontal_squared[row] = _distance_transform_1d(
+                np.where(hazard_mask[row], 0.0, np.inf),
+                x_spacing,
+            )
+        squared = np.empty(hazard_mask.shape, dtype="float64")
+        for col in range(hazard_mask.shape[1]):
+            squared[:, col] = _distance_transform_1d(
+                horizontal_squared[:, col],
+                y_spacing,
+            )
+        return np.sqrt(squared).astype("float32")
+
+    return transform(1.0, 1.0), transform(x_size_m, y_size_m)
+
+
+def make_route_cost_grid(
+    slope_deg: np.ndarray,
+    roughness: np.ndarray,
+    hazard_mask: np.ndarray,
+    clearance_cells: np.ndarray,
+) -> np.ndarray:
+    """Build finite terrain costs from the exported mask; hazards stay infinite."""
+    shapes = {slope_deg.shape, roughness.shape, hazard_mask.shape, clearance_cells.shape}
+    if len(shapes) != 1:
+        raise ValueError("Slope, roughness, hazard, and clearance grids must align")
+    walkable = ~hazard_mask
+    if np.any(~np.isfinite(slope_deg[walkable])) or np.any(
+        ~np.isfinite(roughness[walkable])
+    ):
+        raise ValueError("The hazard mask leaves invalid terrain cells walkable")
+
+    costs = np.full(hazard_mask.shape, np.inf, dtype="float32")
+    slope_factor = (
+        slope_deg[walkable].astype("float64") / MAX_WALKABLE_SLOPE_DEG
+    ) ** SLOPE_COST_POWER
+    roughness_factor = (
+        roughness[walkable].astype("float64") / MAX_ROUGHNESS_M
+    ) * ROUGHNESS_COST_WEIGHT
+    clearance_penalty = CLEARANCE_COST_WEIGHT * np.clip(
+        (CLEARANCE_COST_RADIUS_CELLS - clearance_cells[walkable])
+        / CLEARANCE_COST_RADIUS_CELLS,
+        0,
+        1,
+    )
+    costs[walkable] = (
+        1 + slope_factor + roughness_factor + clearance_penalty
+    ).astype("float32")
+    return costs
+
+
+def build_walkable_mask(
+    costs: np.ndarray,
+    clearance_cells: np.ndarray,
+    safety_margin_cells: int,
+) -> np.ndarray:
+    if safety_margin_cells < 0:
+        raise ValueError("Safety margin must be non-negative")
+    return np.isfinite(costs) & (clearance_cells > safety_margin_cells)
+
+
 def astar(
     start: tuple[int, int],
     goal: tuple[int, int],
     walkable: np.ndarray,
-    slope: np.ndarray,
-    roughness: np.ndarray,
+    costs: np.ndarray,
     x_size_m: float,
     y_size_m: float,
 ) -> list[tuple[int, int]]:
@@ -69,19 +198,18 @@ def astar(
         for next_cell in neighbours(*current, *walkable.shape):
             if not walkable[next_cell]:
                 continue
+            row_delta = next_cell[0] - current[0]
+            col_delta = next_cell[1] - current[1]
+            if row_delta and col_delta and (
+                not walkable[current[0] + row_delta, current[1]]
+                or not walkable[current[0], current[1] + col_delta]
+            ):
+                continue
             distance_m = math.hypot(
-                (next_cell[0] - current[0]) * y_size_m,
-                (next_cell[1] - current[1]) * x_size_m,
+                row_delta * y_size_m,
+                col_delta * x_size_m,
             )
-            slope_factor = (
-                float(slope[next_cell]) / MAX_WALKABLE_SLOPE_DEG
-            ) ** SLOPE_COST_POWER
-            roughness_factor = (
-                float(roughness[next_cell]) / MAX_ROUGHNESS_M
-            ) * ROUGHNESS_COST_WEIGHT
-            next_cost = current_cost + distance_m * (
-                1.0 + slope_factor + roughness_factor
-            )
+            next_cost = current_cost + distance_m * float(costs[next_cell])
             if next_cost < cost_so_far.get(next_cell, math.inf):
                 cost_so_far[next_cell] = next_cost
                 came_from[next_cell] = current
@@ -91,26 +219,17 @@ def astar(
     raise ValueError(f"No walkable route exists: {start} -> {goal}")
 
 
-def latlon_to_pixel(
-    point: dict, bounds: dict, rows: int, cols: int
-) -> tuple[int, int]:
-    row = round((bounds["max_lat"] - point["lat"])
-                / (bounds["max_lat"] - bounds["min_lat"]) * (rows - 1))
-    col = round((point["lon"] - bounds["min_lon"])
-                / (bounds["max_lon"] - bounds["min_lon"]) * (cols - 1))
+def latlon_to_pixel(point: dict, transform, rows: int, cols: int) -> tuple[int, int]:
+    row, col = rowcol(transform, point["lon"], point["lat"])
     if not (0 <= row < rows and 0 <= col < cols):
         raise ValueError(f"Coordinate is outside the configured DEM bounds: {point}")
-    return row, col
+    return int(row), int(col)
 
 
-def pixel_to_latlon(pixel: tuple[int, int], bounds: dict, rows: int, cols: int):
+def pixel_to_latlon(pixel: tuple[int, int], transform):
     row, col = pixel
-    return {
-        "lat": bounds["max_lat"] - row / max(1, rows - 1)
-        * (bounds["max_lat"] - bounds["min_lat"]),
-        "lon": bounds["min_lon"] + col / max(1, cols - 1)
-        * (bounds["max_lon"] - bounds["min_lon"]),
-    }
+    lon, lat = xy(transform, row, col, offset="center")
+    return {"lat": lat, "lon": lon}
 
 
 def route_distance_km(route: list[tuple[int, int]], x_size_m: float, y_size_m: float):
@@ -125,49 +244,87 @@ def route_distance_km(route: list[tuple[int, int]], x_size_m: float, y_size_m: f
 
 def export_route_cost_grid(
     site: str,
-    walkable: np.ndarray,
-    slope_deg: np.ndarray,
-    roughness: np.ndarray,
+    costs: np.ndarray,
+    clearance_cells: np.ndarray,
+    clearance_meters: np.ndarray,
     bounds: dict,
+    transform,
     x_size_m: float,
     y_size_m: float,
 ) -> None:
-    """Export the Python route cost function for browser-side A*."""
+    """Export costs and clearances derived from the exported hazard mask."""
     output = PROJECT_ROOT / "web" / "data" / site
     output.mkdir(parents=True, exist_ok=True)
 
-    cost_grid = np.full(walkable.shape, -1, dtype="<f4")
-    slope_factor = (
-        slope_deg[walkable].astype("float64") / MAX_WALKABLE_SLOPE_DEG
-    ) ** SLOPE_COST_POWER
-    roughness_factor = (
-        roughness[walkable].astype("float64") / MAX_ROUGHNESS_M
-    ) * ROUGHNESS_COST_WEIGHT
-    cost_grid[walkable] = (1 + slope_factor + roughness_factor).astype("<f4")
-    (output / "cost.bin").write_bytes(cost_grid.tobytes(order="C"))
+    for filename, values in (
+        ("cost.bin", costs),
+        ("clearance-cells.bin", clearance_cells),
+        ("clearance-meters.bin", clearance_meters),
+    ):
+        (output / filename).write_bytes(
+            np.asarray(values, dtype="<f4").tobytes(order="C")
+        )
 
     metadata = {
+        "format_version": 2,
         "data_status": "REAL - derived from supplied NASA DEM",
         "site": site,
-        "rows": int(walkable.shape[0]),
-        "cols": int(walkable.shape[1]),
+        "rows": int(costs.shape[0]),
+        "cols": int(costs.shape[1]),
         "bounds": bounds,
+        "raster_transform": list(transform)[:6],
         "cell_size_m": {"x": x_size_m, "y": y_size_m},
         "dtype": "float32",
         "byte_order": "little-endian",
         "layout": "row-major",
-        "impassable_value": -1,
+        "hazard_cost": "positive-infinity",
+        "clearance_files": {
+            "cells": "clearance-cells.bin",
+            "meters": "clearance-meters.bin",
+        },
         "parameters": {
             "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
             "max_roughness_m": MAX_ROUGHNESS_M,
             "slope_cost_power": SLOPE_COST_POWER,
             "roughness_cost_weight": ROUGHNESS_COST_WEIGHT,
+            "safety_margin_cells": SAFETY_MARGIN_CELLS,
+            "clearance_cost_radius_cells": CLEARANCE_COST_RADIUS_CELLS,
+            "clearance_cost_weight": CLEARANCE_COST_WEIGHT,
+            "safer_clearance_cost_weight": SAFER_CLEARANCE_COST_WEIGHT,
+            "weighted_astar_epsilon": WEIGHTED_ASTAR_EPSILON,
+            "alternate_route_cost_multiplier": ALTERNATE_ROUTE_COST_MULTIPLIER,
+            "alternate_route_corridor_cells": ALTERNATE_ROUTE_CORRIDOR_CELLS,
+            "alternate_route_min_leg_cells": ALTERNATE_ROUTE_MIN_LEG_CELLS,
+            "alternate_route_max_overlap": ALTERNATE_ROUTE_MAX_OVERLAP,
+            "alternate_route_max_time_factor": ALTERNATE_ROUTE_MAX_TIME_FACTOR,
             "walking_speed_kmh": WALKING_SPEED_KMH,
             "eva_hours": EVA_HOURS,
             "dose_rate_msv_per_hour": DOSE_RATE_MSV_PER_HOUR,
         },
     }
     (output / "cost.json").write_text(json.dumps(metadata, indent=2) + "\n")
+
+
+def nearest_walkable_cell(
+    cell: tuple[int, int],
+    walkable: np.ndarray,
+    x_size_m: float,
+    y_size_m: float,
+) -> tuple[tuple[int, int], float]:
+    if walkable[cell]:
+        return cell, 0.0
+    rows, cols = np.nonzero(walkable)
+    if rows.size == 0:
+        raise ValueError("No cells remain walkable with the configured safety margin")
+    distances_squared = (
+        ((rows - cell[0]) * y_size_m) ** 2
+        + ((cols - cell[1]) * x_size_m) ** 2
+    )
+    nearest = int(np.argmin(distances_squared))
+    return (
+        (int(rows[nearest]), int(cols[nearest])),
+        math.sqrt(float(distances_squared[nearest])),
+    )
 
 
 def process_site(site: str) -> None:
@@ -177,40 +334,94 @@ def process_site(site: str) -> None:
     with rasterio.open(dem_path) as dem_source:
         rows, cols = dem_source.height, dem_source.width
         x_size_m, y_size_m = cell_size_meters(dem_source)
+        transform = dem_source.transform
+        bounds = {
+            "min_lon": dem_source.bounds.left,
+            "min_lat": dem_source.bounds.bottom,
+            "max_lon": dem_source.bounds.right,
+            "max_lat": dem_source.bounds.top,
+        }
     with rasterio.open(output / "slope.tif") as source:
         slope_deg = source.read(1)
+        if source.shape != (rows, cols) or source.transform != transform:
+            raise ValueError(f"{site} slope grid is not aligned with its DEM")
     with rasterio.open(output / "roughness.tif") as source:
         roughness = source.read(1)
+        if source.shape != (rows, cols) or source.transform != transform:
+            raise ValueError(f"{site} roughness grid is not aligned with its DEM")
     with rasterio.open(output / "hazard.tif") as source:
-        hazard = source.read(1)
+        hazard_values = source.read(1)
+        if source.shape != (rows, cols) or source.transform != transform:
+            raise ValueError(f"{site} hazard mask is not aligned with its DEM")
+        if not np.isin(hazard_values, (0, 1)).all():
+            raise ValueError(f"{site} hazard mask must encode only 0=clear and 1=blocked")
+        hazard_mask = hazard_values == 1
 
-    slope_valid = np.isfinite(slope_deg) & (slope_deg != -9999)
-    roughness_valid = np.isfinite(roughness) & (roughness != -9999)
-    walkable = (
-        slope_valid
-        & roughness_valid
-        & (slope_deg <= MAX_WALKABLE_SLOPE_DEG)
-        & (roughness <= MAX_ROUGHNESS_M)
+    clearance_cells, clearance_meters = distance_to_hazards(
+        hazard_mask,
+        x_size_m,
+        y_size_m,
     )
-    bounds = config["bounds"]
+    costs = make_route_cost_grid(
+        slope_deg,
+        roughness,
+        hazard_mask,
+        clearance_cells,
+    )
+    walkable = build_walkable_mask(costs, clearance_cells, SAFETY_MARGIN_CELLS)
     export_route_cost_grid(
-        site, walkable, slope_deg, roughness, bounds, x_size_m, y_size_m
+        site,
+        costs,
+        clearance_cells,
+        clearance_meters,
+        bounds,
+        transform,
+        x_size_m,
+        y_size_m,
     )
-    valid_cells = slope_valid.sum()
-    above_slope = slope_valid & (slope_deg > MAX_WALKABLE_SLOPE_DEG)
     print(
         f"{site}: cell size x={x_size_m:.3f} m, y={y_size_m:.3f} m; "
-        f"slope>{MAX_WALKABLE_SLOPE_DEG:g}° in "
-        f"{100 * above_slope.sum() / valid_cells:.2f}% of valid slope cells"
+        f"hazards={int(hazard_mask.sum())}, "
+        f"routing margin={SAFETY_MARGIN_CELLS} cells"
     )
 
-    points = [config["habitat"], *config["targets"], config["habitat"]]
-    pixels = [latlon_to_pixel(point, bounds, rows, cols) for point in points]
+    requested_points = [
+        ("habitat", config["habitat"]),
+        *[(f"target-{index + 1}", point) for index, point in enumerate(config["targets"])],
+    ]
+    endpoint_records = []
+    for name, point in requested_points:
+        original_cell = latlon_to_pixel(point, transform, rows, cols)
+        snapped_cell, snap_distance_m = nearest_walkable_cell(
+            original_cell,
+            walkable,
+            x_size_m,
+            y_size_m,
+        )
+        center = pixel_to_latlon(snapped_cell, transform)
+        endpoint_records.append({
+            "id": name,
+            "row": snapped_cell[0],
+            "col": snapped_cell[1],
+            "lat": center["lat"],
+            "lon": center["lon"],
+            "snapped": snap_distance_m > 0,
+            "snap_distance_m": round(snap_distance_m, 3),
+            "requested_cell": {"row": original_cell[0], "col": original_cell[1]},
+        })
+        if snap_distance_m > 0:
+            print(
+                f"{site}: {name} snapped from {original_cell} to {snapped_cell} "
+                f"({snap_distance_m:.1f} m)"
+            )
+
+    points = [*endpoint_records, endpoint_records[0]]
+    pixels = [(point["row"], point["col"]) for point in points]
     route_segments = []
     try:
         for start, goal in zip(pixels, pixels[1:]):
             route_segments.append(
-                astar(start, goal, walkable, slope_deg, roughness, x_size_m, y_size_m)
+                astar(start, goal, walkable, costs, x_size_m, y_size_m)
             )
     except ValueError as error:
         raise RuntimeError(
@@ -223,12 +434,6 @@ def process_site(site: str) -> None:
         route_pixels.extend(segment[1:])
     distance_km = route_distance_km(route_pixels, x_size_m, y_size_m)
     time_h = distance_km / WALKING_SPEED_KMH
-    if time_h > EVA_HOURS:
-        raise RuntimeError(
-            f"{site} route requires {time_h:.2f} h, over the {EVA_HOURS:.2f} h "
-            "EVA assumption; move the placeholder habitat or targets."
-        )
-
     legs = []
     for index, segment in enumerate(route_segments):
         distance = route_distance_km(segment, x_size_m, y_size_m)
@@ -242,10 +447,17 @@ def process_site(site: str) -> None:
         "distance_km": round(distance_km, 3),
         "time_h": round(time_h, 3),
         "return_margin_h": round(EVA_HOURS - time_h, 3),
+        "within_eva_limit": time_h <= EVA_HOURS,
         "est_dose_msv": round(time_h * DOSE_RATE_MSV_PER_HOUR, 4),
         "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
         "max_roughness_m": MAX_ROUGHNESS_M,
-        "slope_over_limit_fraction": round(float(above_slope.sum() / valid_cells), 6),
+        "hazard_cells": int(hazard_mask.sum()),
+        "hazard_fraction": round(float(hazard_mask.mean()), 6),
+        "safety_margin_cells": SAFETY_MARGIN_CELLS,
+        "minimum_clearance_m": round(
+            min(float(clearance_meters[row, col]) for row, col in route_pixels),
+            3,
+        ),
         "cell_size_m": {"x": round(x_size_m, 3), "y": round(y_size_m, 3)},
     }
     grid = {
@@ -255,23 +467,25 @@ def process_site(site: str) -> None:
         "rows": rows,
         "cols": cols,
         "grid_bounds": [[0, 0], [rows, cols]],
-        "geo_reference": {"status": "REAL DEM bounds", "bounds": bounds},
+        "geo_reference": {
+            "status": "REAL DEM bounds",
+            "bounds": bounds,
+            "transform": list(transform)[:6],
+            "cell_centers": True,
+        },
         "cell_size_m": {"x": x_size_m, "y": y_size_m},
         "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
         "max_roughness_m": MAX_ROUGHNESS_M,
+        "safety_margin_cells": SAFETY_MARGIN_CELLS,
         "route_pixels": route_pixels,
         "route_segments": route_segments,
-        "targets": [
-            {"id": f"target-{index + 1}", "row": row, "col": col,
-             "lat": point["lat"], "lon": point["lon"]}
-            for index, (point, (row, col)) in enumerate(zip(config["targets"], pixels[1:-1]))
-        ],
+        "targets": endpoint_records[1:],
         "legs": legs,
-        "habitat": {
-            "row": pixels[0][0], "col": pixels[0][1],
-            "lat": config["habitat"]["lat"], "lon": config["habitat"]["lon"],
-        },
-        "coordinate_status": "PLACEHOLDER - replace habitat and target coordinates",
+        "habitat": endpoint_records[0],
+        "coordinate_status": (
+            "PLACEHOLDER - route coordinates are DEM cell centers snapped outside "
+            "the configured hazard margin"
+        ),
         "layer_paths": {
             "elevation": f"data/processed/{site}/elevation.png",
             "imagery": f"data/processed/{site}/imagery.png",
@@ -295,10 +509,14 @@ def process_site(site: str) -> None:
     (output / "route.geojson").write_text(json.dumps({
         "type": "FeatureCollection",
         "properties": {"data_status": "REAL - derived from supplied NASA DEM",
-                       "coordinate_system": "grid row,col"},
+                       "coordinate_system": "grid row,col cell centers"},
         "features": features,
     }, indent=2) + "\n")
-    print(f"{site}: route {distance_km:.3f} km, {time_h:.3f} h")
+    eva_status = "within" if time_h <= EVA_HOURS else "over"
+    print(
+        f"{site}: route {distance_km:.3f} km, {time_h:.3f} h "
+        f"({eva_status} {EVA_HOURS:g} h EVA limit)"
+    )
 
 
 def main() -> None:

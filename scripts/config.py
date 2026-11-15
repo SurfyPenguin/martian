@@ -60,6 +60,22 @@ MAX_WALKABLE_SLOPE_DEG = 15.0
 # ASSUMPTION: local 5x5 elevation standard deviation above this value is
 # considered too rough for the planned EVA.
 MAX_ROUGHNESS_M = 15.0
+# ASSUMPTION: keep this many cells clear between a route and any hazard.
+SAFETY_MARGIN_CELLS = 2
+# ROUTE SETTING: start tapering a soft hazard-clearance penalty at this radius.
+CLEARANCE_COST_RADIUS_CELLS = 6.0
+# ROUTE SETTING: maximum added traversal cost at the clearance radius.
+CLEARANCE_COST_WEIGHT = 0.5
+# ROUTE SETTING: extra clearance cost used by the optional Safer route.
+SAFER_CLEARANCE_COST_WEIGHT = 2.5
+# ROUTE SETTING: default heuristic weight for Weighted A*.
+WEIGHTED_ASTAR_EPSILON = 1.5
+# ROUTE SETTINGS: parameters for the optional Alternate path search.
+ALTERNATE_ROUTE_COST_MULTIPLIER = 3.0
+ALTERNATE_ROUTE_CORRIDOR_CELLS = 15
+ALTERNATE_ROUTE_MIN_LEG_CELLS = 40
+ALTERNATE_ROUTE_MAX_OVERLAP = 0.6
+ALTERNATE_ROUTE_MAX_TIME_FACTOR = 1.4
 # ASSUMPTION: average walking speed for a suited astronaut.
 WALKING_SPEED_KMH = 3.0
 # ASSUMPTION: planned maximum EVA duration before return.

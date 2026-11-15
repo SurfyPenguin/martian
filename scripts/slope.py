@@ -91,6 +91,26 @@ def calculate_roughness(dem: np.ndarray, valid: np.ndarray) -> np.ndarray:
     return roughness
 
 
+def build_hazard_mask(
+    slope_deg: np.ndarray,
+    roughness: np.ndarray,
+    max_slope_deg: float,
+    max_roughness_m: float,
+) -> np.ndarray:
+    """Build the sole routing/display hazard mask, treating invalid cells as blocked."""
+    valid = (
+        np.isfinite(slope_deg)
+        & (slope_deg != -9999)
+        & np.isfinite(roughness)
+        & (roughness != -9999)
+    )
+    return (
+        ~valid
+        | (slope_deg > max_slope_deg)
+        | (roughness > max_roughness_m)
+    )
+
+
 def rgba_from_scalar(values: np.ndarray, valid: np.ndarray) -> np.ndarray:
     """Scale each scalar image from its own valid min/max with transparency."""
     rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
@@ -157,11 +177,11 @@ def process_site(site: str) -> None:
     roughness = calculate_roughness(dem, valid)
     slope_valid = np.isfinite(slope_deg)
     roughness_valid = np.isfinite(roughness)
-    hazard = (
-        ~slope_valid
-        | ~roughness_valid
-        | (slope_deg > MAX_WALKABLE_SLOPE_DEG)
-        | (roughness > MAX_ROUGHNESS_M)
+    hazard_mask = build_hazard_mask(
+        slope_deg,
+        roughness,
+        MAX_WALKABLE_SLOPE_DEG,
+        MAX_ROUGHNESS_M,
     )
     slope_output = np.where(slope_valid, slope_deg, -9999).astype("float32")
     roughness_output = np.where(roughness_valid, roughness, -9999).astype("float32")
@@ -178,22 +198,23 @@ def process_site(site: str) -> None:
                 CELL_SIZE_Y_M=f"{y_size_m:.3f}",
             )
     hazard_profile = profile.copy()
-    hazard_profile.update(count=1, dtype="uint8", nodata=255)
+    hazard_profile.update(count=1, dtype="uint8", nodata=None)
     with rasterio.open(output / "hazard.tif", "w", **hazard_profile) as target:
-        target.write(np.where(hazard, 1, 0).astype("uint8"), 1)
+        target.write(hazard_mask.astype("uint8"), 1)
         target.update_tags(
             DATA_STATUS="REAL - derived from supplied NASA DEM",
             SOURCE_PROVENANCE=config["provenance"],
-            HAZARD_ENCODING="0=walkable, 1=slope_or_roughness_hazard, 255=nodata",
+            HAZARD_ENCODING="0=clear, 1=slope_or_roughness_or_nodata_hazard",
+            CELL_SIZE_X_M=f"{x_size_m:.6f}",
+            CELL_SIZE_Y_M=f"{y_size_m:.6f}",
         )
 
     elevation_valid = valid & np.isfinite(dem)
     write_png(output / "elevation.png", rgba_from_scalar(dem, elevation_valid))
     write_png(output / "slope.png", rgba_from_scalar(slope_deg, slope_valid))
-    hazard_rgba = np.zeros((*hazard.shape, 4), dtype=np.uint8)
-    display_hazard = valid & slope_valid & roughness_valid & hazard
-    hazard_rgba[display_hazard, :3] = (239, 68, 68)
-    hazard_rgba[display_hazard, 3] = 220
+    hazard_rgba = np.zeros((*hazard_mask.shape, 4), dtype=np.uint8)
+    hazard_rgba[hazard_mask, :3] = (239, 68, 68)
+    hazard_rgba[hazard_mask, 3] = 220
     write_png(output / "hazard.png", hazard_rgba)
     export_imagery(
         config["imagery_path"],
@@ -203,12 +224,10 @@ def process_site(site: str) -> None:
         output / "imagery.png",
     )
 
-    above_slope = valid & (slope_deg > MAX_WALKABLE_SLOPE_DEG)
     print(
         f"{site}: cell size x={x_size_m:.3f} m, y={y_size_m:.3f} m; "
-        f"slope>{MAX_WALKABLE_SLOPE_DEG:g}° in "
-        f"{100 * above_slope.sum() / valid.sum():.2f}% of valid cells; "
-        f"hazard cells={hazard.sum()}"
+        f"hazard cells={hazard_mask.sum()} "
+        f"({100 * hazard_mask.mean():.2f}% of grid)"
     )
 
 

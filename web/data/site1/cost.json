@@ -1,14 +1,23 @@
 {
+  "format_version": 2,
   "data_status": "REAL - derived from supplied NASA DEM",
   "site": "site1",
   "rows": 500,
   "cols": 502,
   "bounds": {
-    "min_lon": 137.38372932,
-    "min_lat": -4.62945782,
-    "max_lon": 137.46856732,
-    "max_lat": -4.54495782
+    "min_lon": 137.3837293188735,
+    "min_lat": -4.629457819381081,
+    "max_lon": 137.46856731887348,
+    "max_lat": -4.5449578193810805
   },
+  "raster_transform": [
+    0.000169,
+    0.0,
+    137.3837293188735,
+    0.0,
+    -0.000169,
+    -4.5449578193810805
+  ],
   "cell_size_m": {
     "x": 9.965666003411526,
     "y": 9.997691014382777
@@ -16,12 +25,26 @@
   "dtype": "float32",
   "byte_order": "little-endian",
   "layout": "row-major",
-  "impassable_value": -1,
+  "hazard_cost": "positive-infinity",
+  "clearance_files": {
+    "cells": "clearance-cells.bin",
+    "meters": "clearance-meters.bin"
+  },
   "parameters": {
     "max_walkable_slope_deg": 15.0,
     "max_roughness_m": 15.0,
     "slope_cost_power": 1.0,
     "roughness_cost_weight": 0.05,
+    "safety_margin_cells": 2,
+    "clearance_cost_radius_cells": 6.0,
+    "clearance_cost_weight": 0.5,
+    "safer_clearance_cost_weight": 2.5,
+    "weighted_astar_epsilon": 1.5,
+    "alternate_route_cost_multiplier": 3.0,
+    "alternate_route_corridor_cells": 15,
+    "alternate_route_min_leg_cells": 40,
+    "alternate_route_max_overlap": 0.6,
+    "alternate_route_max_time_factor": 1.4,
     "walking_speed_kmh": 3.0,
     "eva_hours": 4.0,
     "dose_rate_msv_per_hour": 0.02
