@@ -1,0 +1,29 @@
+{
+  "data_status": "REAL - derived from supplied NASA DEM",
+  "site": "site2",
+  "rows": 501,
+  "cols": 502,
+  "bounds": {
+    "min_lon": 137.35759675,
+    "min_lat": -4.84236515,
+    "max_lon": 137.44243475,
+    "max_lat": -4.75769615
+  },
+  "cell_size_m": {
+    "x": 9.962627257337223,
+    "y": 9.997691014382777
+  },
+  "dtype": "float32",
+  "byte_order": "little-endian",
+  "layout": "row-major",
+  "impassable_value": -1,
+  "parameters": {
+    "max_walkable_slope_deg": 15.0,
+    "max_roughness_m": 15.0,
+    "slope_cost_power": 1.0,
+    "roughness_cost_weight": 0.05,
+    "walking_speed_kmh": 3.0,
+    "eva_hours": 4.0,
+    "dose_rate_msv_per_hour": 0.02
+  }
+}

@@ -13,6 +13,7 @@ from config import (
     EVA_HOURS,
     MAX_ROUGHNESS_M,
     MAX_WALKABLE_SLOPE_DEG,
+    PROJECT_ROOT,
     ROUGHNESS_COST_WEIGHT,
     SLOPE_COST_POWER,
     WALKING_SPEED_KMH,
@@ -122,6 +123,53 @@ def route_distance_km(route: list[tuple[int, int]], x_size_m: float, y_size_m: f
     ) / 1000
 
 
+def export_route_cost_grid(
+    site: str,
+    walkable: np.ndarray,
+    slope_deg: np.ndarray,
+    roughness: np.ndarray,
+    bounds: dict,
+    x_size_m: float,
+    y_size_m: float,
+) -> None:
+    """Export the Python route cost function for browser-side A*."""
+    output = PROJECT_ROOT / "web" / "data" / site
+    output.mkdir(parents=True, exist_ok=True)
+
+    cost_grid = np.full(walkable.shape, -1, dtype="<f4")
+    slope_factor = (
+        slope_deg[walkable].astype("float64") / MAX_WALKABLE_SLOPE_DEG
+    ) ** SLOPE_COST_POWER
+    roughness_factor = (
+        roughness[walkable].astype("float64") / MAX_ROUGHNESS_M
+    ) * ROUGHNESS_COST_WEIGHT
+    cost_grid[walkable] = (1 + slope_factor + roughness_factor).astype("<f4")
+    (output / "cost.bin").write_bytes(cost_grid.tobytes(order="C"))
+
+    metadata = {
+        "data_status": "REAL - derived from supplied NASA DEM",
+        "site": site,
+        "rows": int(walkable.shape[0]),
+        "cols": int(walkable.shape[1]),
+        "bounds": bounds,
+        "cell_size_m": {"x": x_size_m, "y": y_size_m},
+        "dtype": "float32",
+        "byte_order": "little-endian",
+        "layout": "row-major",
+        "impassable_value": -1,
+        "parameters": {
+            "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
+            "max_roughness_m": MAX_ROUGHNESS_M,
+            "slope_cost_power": SLOPE_COST_POWER,
+            "roughness_cost_weight": ROUGHNESS_COST_WEIGHT,
+            "walking_speed_kmh": WALKING_SPEED_KMH,
+            "eva_hours": EVA_HOURS,
+            "dose_rate_msv_per_hour": DOSE_RATE_MSV_PER_HOUR,
+        },
+    }
+    (output / "cost.json").write_text(json.dumps(metadata, indent=2) + "\n")
+
+
 def process_site(site: str) -> None:
     config = site_config(site)
     output = site_output_dir(site)
@@ -144,6 +192,10 @@ def process_site(site: str) -> None:
         & (slope_deg <= MAX_WALKABLE_SLOPE_DEG)
         & (roughness <= MAX_ROUGHNESS_M)
     )
+    bounds = config["bounds"]
+    export_route_cost_grid(
+        site, walkable, slope_deg, roughness, bounds, x_size_m, y_size_m
+    )
     valid_cells = slope_valid.sum()
     above_slope = slope_valid & (slope_deg > MAX_WALKABLE_SLOPE_DEG)
     print(
@@ -152,7 +204,6 @@ def process_site(site: str) -> None:
         f"{100 * above_slope.sum() / valid_cells:.2f}% of valid slope cells"
     )
 
-    bounds = config["bounds"]
     points = [config["habitat"], *config["targets"], config["habitat"]]
     pixels = [latlon_to_pixel(point, bounds, rows, cols) for point in points]
     route_segments = []
