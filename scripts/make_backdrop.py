@@ -121,7 +121,7 @@ def write_rgba_png(path: Path, rgba: np.ndarray) -> None:
 
 def create_hillshade(output: Path) -> None:
     source = RAW_DIR / "gale_dem_smg_1m.tif"
-    with tempfile.TemporaryDirectory(prefix="marswalk-backdrop-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="martian-map-backdrop-") as temp_dir:
         temp_dir_path = Path(temp_dir)
         decimated_dem = temp_dir_path / "dem_decimated.tif"
         hillshade = temp_dir_path / "hillshade.tif"

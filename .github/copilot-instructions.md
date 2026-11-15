@@ -1,4 +1,4 @@
-# MarsWalk Planner
+# Martian Map
 
 ## Read first
 Before any task, read docs/CHALLENGE.md (what judges want), docs/PLAN.md (our design),

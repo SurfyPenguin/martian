@@ -1,4 +1,4 @@
-# Agent handoff: MarsWalk Planner
+# Agent handoff: Martian Map
 
 Updated 2026-11-15. Recheck the live repository before acting; this file is a
 context summary, not a substitute for the code or project status.
@@ -16,9 +16,9 @@ against the current code before treating them as open issues.
 
 ## Project summary
 
-MarsWalk Planner is a NASA Space Apps Challenge 2026 prototype for planning
+Martian Map is a NASA Space Apps Challenge 2026 prototype for planning
 candidate EVAs at two supplied sites in Gale Crater: **Gale crater floor** and
-**Southern box**. The README currently calls the project "Martian Map."
+**Southern box**. The project title is "Martian Map."
 Routing is limited to the two roughly 5 x 5 km site areas; the surrounding
 map is lower-resolution context only.
 
@@ -38,15 +38,18 @@ radiation or weather data and does not provide mineral identifications.
 
 ## Current repository state
 
-At the start of this handoff update, local `main` was at `c180c43`, 15 commits
-ahead of the locally recorded `origin/main` at `75a12ae`. The feature history
-had been fast-forwarded into local `main`; this was not pushed. The remote is
-configured over SSH, but SSH authentication failed in this environment, and
-the GitHub CLI is not installed. Do not assume remote branches or PR state are
-current, and do not push directly to `main`.
+The preceding handoff refresh started with local `main` at `c180c43`, 15
+commits ahead of the locally recorded `origin/main` at `75a12ae`. It was
+committed as `1b0e232` on `feat/handoff-context` and fast-forwarded into local
+`main`; it was not pushed. The remote is configured over SSH, but SSH
+authentication failed in this environment, and the GitHub CLI is not installed.
+Do not assume remote branches or PR state are current, and do not push directly
+to `main`.
 
-The handoff update is being made on `feat/handoff-context`, created from local
-`main`. Check `git status --short --branch`, `git log --oneline -8`, and
+At the start of the current title correction, local `main` was at `1b0e232`,
+16 commits ahead of the locally recorded `origin/main`. The title correction
+was made on `docs/martian-map-title`, created from local `main`. Check
+`git status --short --branch`, `git log --oneline -8`, and
 `git worktree list --porcelain` before switching branches or merging. Preserve
 uncommitted and untracked user files.
 

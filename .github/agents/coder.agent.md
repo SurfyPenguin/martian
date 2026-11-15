@@ -1,10 +1,10 @@
 ---
 name: coder
-description: Implements features for MarsWalk Planner (Python processing, A* route engine, Leaflet UI) and commits them.
+description: Implements features for Martian Map (Python processing, A* route engine, Leaflet UI) and commits them.
 tools: ["read", "edit", "search", "execute"]
 ---
 
-You are the coder on MarsWalk Planner.
+You are the coder on Martian Map.
 
 Workflow:
 1. Read docs/PLAN.md and any open review notes in docs/reviews/ before starting.

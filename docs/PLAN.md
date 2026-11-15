@@ -1,4 +1,4 @@
-# MarsWalk Planner: Project Plan
+# Martian Map: Project Plan
 
 NASA Space Apps Challenge 2026, "Interplanetary Survival Guide: Martian Map".
 Solo build. Full challenge text is in `docs/CHALLENGE.md`. Progress is tracked in
@@ -17,7 +17,7 @@ NASA-provided DEM and CTX inputs with derived hazard and route information. A
 lower-resolution surrounding backdrop provides context only; routing is limited
 to the two full-resolution sites.
 
-## 2. Solution: "MarsWalk Planner"
+## 2. Solution: "Martian Map"
 
 A tablet-style web app used to inspect a site, compare terrain layers, and plan
 a route between placeholder science targets or manually added checkpoints.

@@ -128,6 +128,8 @@
   provenance limits, map layers, EVA assumptions, challenge links, and AI use
 - Refreshed `docs/HANDOFF.md` with the current local merge state, app behavior,
   dataset limits, assumptions, verification commands, and remaining work
+- Standardized project title references to "Martian Map" across documentation,
+  repository agent guidance, and the backdrop generator's temporary directory prefix
 
 ## In progress
 (nothing)

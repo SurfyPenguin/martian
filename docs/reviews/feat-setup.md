@@ -15,4 +15,4 @@
 - `requirements.txt:1-2` leaves `rasterio` and `numpy` unpinned, which makes the setup less reproducible across environments.
 - Add trailing newlines to the changed text files for cleaner diffs.
 
-**Merge readiness:** Not ready to merge until the unsupported/inconsistent AOI record is corrected or removed. Even after that, this is only an incremental setup branch and does not yet satisfy the MarsWalk MVP definition of done.
+**Merge readiness:** Not ready to merge until the unsupported/inconsistent AOI record is corrected or removed. Even after that, this is only an incremental setup branch and does not yet satisfy the Martian Map MVP definition of done.
