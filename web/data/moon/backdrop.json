@@ -1,0 +1,26 @@
+{
+  "data_status": "REAL - NASA LOLA roughness product",
+  "product": "LDRM_80S_1000MPP_ADJ_ROUGH_100M.tiff",
+  "source_resolution_m": 1000,
+  "overview_shape": [
+    304,
+    304
+  ],
+  "bounds": {
+    "min_x": -304000.0,
+    "min_y": -304000.0,
+    "max_x": 304000.0,
+    "max_y": 304000.0
+  },
+  "transform": [
+    2000.0,
+    0.0,
+    -304000.0,
+    0.0,
+    -2000.0,
+    304000.0
+  ],
+  "coordinate_system": "South polar stereographic, meters",
+  "radius_m": 1737400.0,
+  "image": "roughness_backdrop.png"
+}

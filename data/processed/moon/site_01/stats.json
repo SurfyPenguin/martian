@@ -1,0 +1,53 @@
+{
+  "data_status": "REAL - NASA lunar raster products; placeholders are labeled",
+  "site": "site_01",
+  "site_name": "Connecting Ridge",
+  "center_xy_m": {
+    "x": -10999.99998430812,
+    "y": -11999.999978165917
+  },
+  "bounds_xy_m": {
+    "min_x": -13500,
+    "min_y": -14500,
+    "max_x": -8500,
+    "max_y": -9500
+  },
+  "source_raster_bounds_xy_m": {
+    "min_x": -19000.0,
+    "min_y": -20000.0,
+    "max_x": -3000.0,
+    "max_y": -4000.0
+  },
+  "cell_size_m": {
+    "x": 10,
+    "y": 10
+  },
+  "elevation_min": 1108.2420654296875,
+  "elevation_max": 1959.142578125,
+  "elevation_std": 183.84014892578125,
+  "nodata_cells": 0,
+  "slope_source_mean_absolute_difference_degrees": 0.4109657406806946,
+  "slope_comparison_cells": 250000,
+  "lola_return_pixel_fraction": 0.083265,
+  "hazard_cells": 99837,
+  "hazard_fraction": 0.399348,
+  "largest_passable_component_fraction": 0.424448,
+  "chokepoints": 1,
+  "safety_margin_cells": 2,
+  "route_distance_km": 8.473006486383879,
+  "route_time_h": 2.824335495461293,
+  "return_margin_h": 1.175664504538707,
+  "within_eva_limit": true,
+  "dose_status": "not computed: no lunar radiation source integrated",
+  "thresholds": {
+    "max_walkable_slope_deg": 15.0,
+    "max_roughness_m": 15.0
+  },
+  "assumptions": [
+    "walking speed",
+    "EVA hours",
+    "slope limit",
+    "roughness limit",
+    "habitat and targets"
+  ]
+}

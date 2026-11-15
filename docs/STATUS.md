@@ -150,13 +150,20 @@
   no raw inputs or GDAL sidecars are included
 
 ## In progress
-(nothing)
+- Moon mode: source data audit is complete and `site_01` is processed with
+  working body switching, lunar projection, layers, and route verification.
+  `site_04`, `site_07`, `sl3`, full lunar stress tests, and final documentation
+  remain.
 
 ## Blocked on me
 - Habitat and target coordinates are placeholders pending mission-provided points
 - Radiation and weather sources are not integrated yet
 
 ## Next
-1. Replace placeholder habitat and target coordinates with mission points
-2. Record product IDs and acquisition dates if the source provenance is provided
-3. Add validated radiation or weather sources before presenting them as layers
+1. Process and test the remaining three lunar raster sites without changing
+   configured thresholds
+2. Verify all Moon sites and repeat a browser route check on each Mars site
+3. Replace placeholder habitat and target coordinates only when verified
+   mission points are available
+4. Record product IDs and acquisition dates if the source provenance is provided
+5. Add validated radiation or weather sources before presenting them as layers

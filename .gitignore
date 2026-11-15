@@ -7,5 +7,6 @@ __pycache__/
 node_modules/
 .DS_Store
 !data/processed/*.tif
+!data/processed/moon/**/*.tif
 data/processed/*_full_res.tif
 *.aux.xml

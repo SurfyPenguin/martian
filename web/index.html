@@ -16,11 +16,18 @@
         aria-controls="mission-sidebar" aria-label="Hide mission panel to view the map">
         <span></span><span></span>
       </button>
+      <label class="body-picker" for="body-select"><span>Body</span>
+        <select id="body-select">
+          <option value="mars">Mars</option>
+          <option value="moon">Moon</option>
+        </select>
+      </label>
       <header class="mission-header">
         <h1 id="site-name">Mars field plan</h1>
-        <div class="mission-meta"><span id="site-region">Real NASA data</span><span>3 targets</span></div>
+        <div class="mission-meta"><span id="site-region">Real NASA data</span><span id="target-count">3 targets</span></div>
       </header>
       <div class="banner"><span class="status-dot"></span><span id="site-banner-copy">Loading site data...</span></div>
+      <p id="body-data-note" class="body-data-note" hidden></p>
       <p id="site-limitations-note" class="site-limitations-note" hidden></p>
 
       <section class="control-section">
@@ -30,13 +37,17 @@
           <h2>Layers</h2>
         </div>
         <label class="layer-row"><input id="terrain-toggle" type="checkbox" checked>
-          <span class="layer-name"><i class="layer-mark terrain-mark"></i>Elevation</span><input id="terrain-opacity" aria-label="Elevation opacity" type="range" min="0" max="1" step="0.05" value="0.9"></label>
-        <label class="layer-row"><input id="imagery-toggle" type="checkbox" checked>
+          <span class="layer-name"><i class="layer-mark terrain-mark"></i><span id="terrain-label">Elevation</span></span><input id="terrain-opacity" aria-label="Terrain opacity" type="range" min="0" max="1" step="0.05" value="0.9"></label>
+        <label id="imagery-layer-row" class="layer-row"><input id="imagery-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark imagery-mark"></i>CTX imagery</span><input id="imagery-opacity" aria-label="Imagery opacity" type="range" min="0" max="1" step="0.05" value="0.65"></label>
+        <label id="backdrop-layer-row" class="layer-row" hidden><input id="backdrop-toggle" type="checkbox" checked>
+          <span class="layer-name"><i class="layer-mark backdrop-mark"></i>Roughness backdrop</span><input id="backdrop-opacity" aria-label="Roughness backdrop opacity" type="range" min="0" max="1" step="0.05" value="0.55"></label>
         <label class="layer-row"><input id="slope-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark slope-mark"></i>Slope</span><input id="slope-opacity" aria-label="Slope opacity" type="range" min="0" max="1" step="0.05" value="0.35"></label>
         <label class="layer-row"><input id="hazard-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark hazard-mark"></i>Hazard</span><input id="hazard-opacity" aria-label="Hazard opacity" type="range" min="0" max="1" step="0.05" value="0.7"></label>
+        <label id="support-layer-row" class="layer-row" hidden><input id="support-toggle" type="checkbox" checked>
+          <span class="layer-name"><i class="layer-mark support-mark"></i>LOLA return support</span><input id="support-opacity" aria-label="LOLA return support opacity" type="range" min="0" max="1" step="0.05" value="0.8"></label>
         <label class="layer-row"><input id="route-toggle" type="checkbox" checked>
           <span class="layer-name"><i class="layer-mark route-mark"></i>Route</span><input id="route-opacity" aria-label="Route opacity" type="range" min="0" max="1" step="0.05" value="1"></label>
         <label class="layer-row"><input id="targets-toggle" type="checkbox" checked>
@@ -52,7 +63,7 @@
         <div class="stat"><span>Route distance</span><strong id="distance">--</strong></div>
         <div class="stat"><span>Estimated EVA time</span><strong id="time">--</strong></div>
         <div class="stat"><span id="margin-label">Return margin</span><strong id="margin">--</strong></div>
-        <div class="stat"><span>Estimated dose</span><strong id="dose">--</strong></div>
+        <div class="stat"><span id="dose-label">Estimated dose</span><strong id="dose">--</strong></div>
         <div id="route-assumptions" class="safety-intro">ASSUMPTIONS · loading</div>
         <label class="safety-margin-control" for="safety-margin">
           <span>Safety margin · ASSUMPTION <output id="safety-margin-value">2 cells</output></span>
@@ -72,7 +83,7 @@
           <div class="slope-key-bar"></div>
           <div class="slope-key-labels"><span>0°</span><span id="slope-limit">15°+</span></div>
         </div>
-        <p>Red cells exceed the slope or roughness setting. DEM, imagery and the surrounding map are real NASA data; the surrounding map is lower resolution and context only. Habitat, targets, dose, radiation and walking speed remain placeholders or assumptions.</p>
+        <p id="body-legend-note">Red cells exceed the slope or roughness setting. DEM, imagery and the surrounding map are real NASA data; the surrounding map is lower resolution and context only. Habitat, targets, dose, radiation and walking speed remain placeholders or assumptions.</p>
         <p id="coordinate-readout" class="coordinate-readout">Move over the grid for coordinates.</p>
         <p id="load-status" class="load-status">Loading processed layers...</p>
       </section>

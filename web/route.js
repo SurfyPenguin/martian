@@ -340,6 +340,7 @@
       safetyMarginCells,
       returnMarginH: timeH === null ? null : grid.parameters.eva_hours - timeH,
       doseMsv: timeH === null
+        || grid.parameters.dose_rate_msv_per_hour == null
         ? null
         : timeH * grid.parameters.dose_rate_msv_per_hour,
       unreachable,
@@ -507,7 +508,9 @@
       epsilon,
       safetyMarginCells,
       returnMarginH: timeH === null ? null : grid.parameters.eva_hours - timeH,
-      doseMsv: timeH === null ? null : timeH * grid.parameters.dose_rate_msv_per_hour,
+      doseMsv: timeH === null || grid.parameters.dose_rate_msv_per_hour == null
+        ? null
+        : timeH * grid.parameters.dose_rate_msv_per_hour,
       unreachable,
     };
   }

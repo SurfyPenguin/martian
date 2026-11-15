@@ -5,6 +5,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 MARS_RADIUS_M = 3_389_500.0
+MOON_RADIUS_M = 1_737_400.0
 
 SITES = {
     "site1": {
@@ -109,6 +110,11 @@ SITES = {
     },
 }
 
+# ASSUMPTION: lunar EVA walking speed; no mission-specific speed was supplied.
+MOON_WALKING_SPEED_KMH = 3.0
+# ASSUMPTION: lunar EVA duration; no mission-specific limit was supplied.
+MOON_EVA_HOURS = 4.0
+
 # ASSUMPTION: maximum slope considered walkable by a suited astronaut.
 MAX_WALKABLE_SLOPE_DEG = 15.0
 # ASSUMPTION: local 5x5 elevation standard deviation above this value is
@@ -116,6 +122,83 @@ MAX_WALKABLE_SLOPE_DEG = 15.0
 MAX_ROUGHNESS_M = 15.0
 # ASSUMPTION: keep this many cells clear between a route and any hazard.
 SAFETY_MARGIN_CELLS = 2
+
+# These are the supplied raster identifiers. Named-region labels are checked
+# against the GeoJSON by make_moon_site.py; site_04 has no matching feature.
+BODIES = {
+    "mars": {
+        "label": "Mars",
+        "radius_m": MARS_RADIUS_M,
+        "sites": SITES,
+    },
+    "moon": {
+        "label": "Moon",
+        "radius_m": MOON_RADIUS_M,
+        "raw_dir": PROJECT_ROOT / "data" / "raw" / "moon",
+        "regions_file": "A3_Named_regions_SP.geojson",
+        "roughness_file": "LDRM_80S_1000MPP_ADJ_ROUGH_100M.tiff",
+        "count_file": "LRO_LOLA_Count_SPole875_5mp_v04.tif",
+        "default_site": "site_01",
+        "layers": {
+            "roughness": {
+                "label": "Roughness backdrop",
+                "product": "LDRM_80S_1000MPP_ADJ_ROUGH_100M.tiff",
+                "resolution_m": 1000,
+            },
+            "count": {
+                "label": "LOLA laser-return support",
+                "product": "LRO_LOLA_Count_SPole875_5mp_v04.tif",
+                "resolution_m": 5,
+            },
+            "site_resolution_m": 5,
+            "routing_resolution_m": 10,
+            "slope_uncertainty_degrees": [1.5, 2.5],
+            "not_integrated": [
+                "illumination",
+                "temperature",
+                "radiation",
+                "imagery",
+            ],
+        },
+        "assumptions": {
+            # ASSUMPTION: reuse the configured conservative slope threshold.
+            "max_walkable_slope_deg": MAX_WALKABLE_SLOPE_DEG,
+            # ASSUMPTION: reuse the configured roughness threshold.
+            "max_roughness_m": MAX_ROUGHNESS_M,
+            "safety_margin_cells": SAFETY_MARGIN_CELLS,
+            "walking_speed_kmh": MOON_WALKING_SPEED_KMH,
+            "eva_hours": MOON_EVA_HOURS,
+            "dose_rate_msv_per_hour": None,
+        },
+        "sites": {
+            "site_01": {
+                "label": "Connecting Ridge",
+                "region_id": 6,
+                "surface_file": "site_01_final_adj_5mpp_surf.tif",
+                "slope_file": "site_01_final_adj_5mpp_slp.tif",
+            },
+            "site_04": {
+                "label": "site_04 raster (unmatched named region)",
+                "region_id": None,
+                "surface_file": "site_04_final_adj_5mpp_surf.tif",
+                "slope_file": "site_04_final_adj_5mpp_slp.tif",
+            },
+            "site_07": {
+                "label": "Peak Near Shakleton",
+                "region_id": 8,
+                "surface_file": "site_07_final_adj_5mpp_surf.tif",
+                "slope_file": "site_07_final_adj_5mpp_slp.tif",
+            },
+            "sl3": {
+                "label": "Connecting Ridge Extension",
+                "region_id": 5,
+                "surface_file": "sl3_final_adj_5mpp_surf.tif",
+                "slope_file": "sl3_final_adj_5mpp_slp.tif",
+            },
+        },
+    },
+}
+
 # ROUTE SETTING: start tapering a soft hazard-clearance penalty at this radius.
 CLEARANCE_COST_RADIUS_CELLS = 6.0
 # ROUTE SETTING: maximum added traversal cost at the clearance radius.

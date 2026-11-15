@@ -2,6 +2,10 @@ const layers = {};
 const siteLayers = {};
 const siteData = {};
 let siteManifest = [];
+let bodyManifest = null;
+let selectedBody = "mars";
+let regionLayer = null;
+let backdropLabel = null;
 const ZOOM_SLIDER_MIN_PERCENT = 100;
 const ZOOM_SLIDER_MAX_PERCENT = 300;
 const ZOOM_SLIDER_STEP = 10;
@@ -185,13 +189,13 @@ function createNorthArrow() {
   return element;
 }
 
-function createResetControl(map, bounds) {
+function createResetControl(map) {
   const button = L.DomUtil.create("button", "map-action");
   button.type = "button";
   button.textContent = "Reset view";
   button.title = "Fit the full mission area";
   L.DomEvent.on(button, "click", () => {
-    map.fitBounds(bounds, { padding: [24, 24] });
+    map.fitBounds(backdropBounds, { padding: [24, 24] });
   });
   return button;
 }
@@ -252,7 +256,7 @@ function createZoomButtons(map) {
   return element;
 }
 
-function addNavigationDock(map, bounds, minZoom) {
+function addNavigationDock(map) {
   const control = L.control({ position: "bottomright" });
   control.onAdd = () => {
     const dock = L.DomUtil.create("div", "map-control-dock");
@@ -266,8 +270,8 @@ function addNavigationDock(map, bounds, minZoom) {
     panel.id = "map-navigation-panel";
     panel.hidden = true;
     panel.append(
-      createZoomPercentageControl(map, minZoom),
-      createResetControl(map, bounds),
+      createZoomPercentageControl(map, map.getMinZoom() ?? -12),
+      createResetControl(map),
       createNorthArrow(),
       createZoomButtons(map),
     );
@@ -283,7 +287,9 @@ function addNavigationDock(map, bounds, minZoom) {
   control.addTo(map);
 }
 
-function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm, gridLabel } = {}) {
+function renderCoordinateStatus({
+  latitude, longitude, row, col, rangeKm, gridLabel, rangeLabel = "FROM HABITAT",
+} = {}) {
   const status = document.getElementById("map-inspector");
   if (!latitude) {
     status.innerHTML =
@@ -297,7 +303,7 @@ function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm, gridLa
     '<span class="statusbar-label">COORDINATES</span>'
     + `<strong class="statusbar-coordinate">LAT ${latitude}° · LON ${longitude}°</strong>`
     + `<span class="statusbar-grid">${gridLabel || `GRID ${row}, ${col}`}</span>`
-    + `<span class="statusbar-distance">FROM HABITAT ${rangeKm.toFixed(2)} KM</span>`;
+    + `<span class="statusbar-distance">${rangeLabel} ${rangeKm.toFixed(2)} KM</span>`;
 }
 
 function nearestFreeCell(site, row, col, safetyMarginCells = site.safetyMarginCells) {
@@ -635,7 +641,9 @@ function renderRouteCards(site) {
     metrics.textContent = plan.timeH === null
       ? "No safe route"
       : `${plan.timeH.toFixed(2)} h · ${plan.distanceKm.toFixed(2)} km · `
-        + `${plan.doseMsv.toFixed(4)} mSv`;
+        + (plan.doseMsv === null
+          ? "dose not computed"
+          : `${plan.doseMsv.toFixed(4)} mSv`);
     const clearance = document.createElement("span");
     clearance.className = "route-card-clearance";
     const differenceMinutes = !fastest || fastest.timeH === null || plan.timeH === null
@@ -711,6 +719,8 @@ function buildSiteLayers(siteKey, grid, routeGrid) {
     key: siteKey,
     name: grid.site_name,
     descriptor: metadata.descriptor,
+    regionId: metadata.region_id ?? null,
+    sourceProducts: metadata.source_products ?? null,
     limitationsNote: metadata.limitations_note,
     grid,
     routeGrid,
@@ -743,16 +753,31 @@ function buildSiteLayers(siteKey, grid, routeGrid) {
   }).bindTooltip("Habitat · placeholder departure point")
     .bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(targets);
 
+  const terrainPath = grid.layer_paths.hillshade || grid.layer_paths.elevation;
   const output = {
-    terrain: makeImageOverlay(grid.layer_paths.elevation, site.bounds, "terrain-pane").addTo(window.map),
-    imagery: makeImageOverlay(grid.layer_paths.imagery, site.bounds, "imagery-pane").addTo(window.map),
-    slope: makeImageOverlay(grid.layer_paths.slope, site.bounds, "slope-pane").addTo(window.map),
-    hazard: makeImageOverlay(grid.layer_paths.hazard, site.bounds, "hazard-pane").addTo(window.map),
+    terrain: makeImageOverlay(terrainPath, site.bounds, "terrain-pane").addTo(window.map),
     route,
     targets,
   };
+  if (grid.layer_paths.imagery) {
+    output.imagery = makeImageOverlay(
+      grid.layer_paths.imagery, site.bounds, "imagery-pane",
+    ).addTo(window.map);
+  }
+  for (const [name, pane] of [
+    ["slope", "slope-pane"],
+    ["hazard", "hazard-pane"],
+    ["support", "support-pane"],
+  ]) {
+    if (grid.layer_paths[name]) {
+      output[name] = makeImageOverlay(
+        grid.layer_paths[name], site.bounds, pane,
+      ).addTo(window.map);
+    }
+  }
   const defaults = {
-    terrain: .9, imagery: .65, slope: .35, hazard: .7, route: 1, targets: 1,
+    terrain: .9, imagery: .65, slope: .35, hazard: .7, support: .8,
+    route: 1, targets: 1,
   };
   Object.entries(output).forEach(([name, layer]) => {
     layer._desiredOpacity = defaults[name];
@@ -782,7 +807,9 @@ function updateSiteSummary(site) {
     ? "Return margin"
     : "EVA margin · return off";
   document.getElementById("dose").textContent = plan.doseMsv === null
-    ? "--"
+    ? (selectedBody === "moon"
+      ? "not computed: no lunar radiation source integrated"
+      : "--")
     : formatNumber(plan.doseMsv, "mSv", 4);
   const safetyStatus = document.getElementById("safety-status");
   const withinLimit = plan.timeH !== null && plan.returnMarginH >= 0;
@@ -796,15 +823,29 @@ function updateSiteSummary(site) {
   safetyStatus.classList.toggle("caution", !plan.unreachable && tightMargin);
   document.getElementById("load-status").textContent =
     `Live ${site.algorithm === "weighted" ? "Weighted A*" : site.algorithm === "astar" ? "A*" : "Dijkstra"} route uses the shared hazard mask. Habitat and science locations are placeholders.`;
-  document.getElementById("site-name").textContent = grid.site_name;
+  document.getElementById("site-name").textContent = `${bodyManifest.label} · ${grid.site_name}`;
   document.getElementById("site-region").textContent = site.descriptor;
-  document.getElementById("site-banner-copy").textContent =
-    `Real NASA DEM + CTX · surrounding map is real NASA data at lower resolution · `
-    + `${site.descriptor} · placeholder habitat and targets · dose, radiation and `
-    + "walking speed are assumptions";
+  document.getElementById("site-banner-copy").textContent = selectedBody === "moon"
+    ? `${site.regionId === null ? "Unmatched supplied site raster" : "Named south pole region"} · `
+      + `${site.descriptor} · 10 m routing grid · PLACEHOLDER habitat and targets`
+    : `Real NASA DEM + CTX · surrounding map is real NASA data at lower resolution · `
+      + `${site.descriptor} · placeholder habitat and targets · dose and walking `
+      + "speed are assumptions";
   const limitationsNote = document.getElementById("site-limitations-note");
   limitationsNote.hidden = !site.limitationsNote;
   limitationsNote.textContent = site.limitationsNote;
+  const bodyDataNote = document.getElementById("body-data-note");
+  if (selectedBody === "moon") {
+    const source = site.sourceProducts;
+    bodyDataNote.textContent = `Real NASA products: ${bodyManifest.layers.roughness.product} `
+      + `(${bodyManifest.layers.roughness.resolution_m} m/pixel), `
+      + `${bodyManifest.layers.count.product} `
+      + `(${bodyManifest.layers.count.resolution_m} m/pixel), `
+      + `${source.surface} and ${source.slope} `
+      + `(${source.source_resolution_m} m source; ${source.routing_resolution_m} m routing grid). `
+      + `${bodyManifest.labels.data_note} Not integrated: `
+      + `${bodyManifest.labels.not_integrated.join(", ")}.`;
+  }
   document.getElementById("site-select").value = site.key;
   document.getElementById("slope-limit").textContent =
     `${parameters.max_walkable_slope_deg}°+`;
@@ -815,10 +856,15 @@ function updateSiteSummary(site) {
   document.getElementById("safety-intro").textContent = site.returnToHabitat
     ? `${choice.name} route · return to Habitat included`
     : `${choice.name} route · return to Habitat is off`;
-  document.getElementById("route-assumptions").textContent =
-    `ASSUMPTIONS · ${parameters.walking_speed_kmh} km/h · `
-    + `${parameters.eva_hours} h EVA · `
-    + `${parameters.dose_rate_msv_per_hour} mSv/h dose`;
+  document.getElementById("route-assumptions").textContent = selectedBody === "moon"
+    ? `ASSUMPTIONS · ${parameters.walking_speed_kmh} km/h · `
+      + `${parameters.eva_hours} h EVA · slope limit ${parameters.max_walkable_slope_deg}°`
+    : `ASSUMPTIONS · ${parameters.walking_speed_kmh} km/h · `
+      + `${parameters.eva_hours} h EVA · `
+      + `${parameters.dose_rate_msv_per_hour} mSv/h dose`;
+  document.getElementById("dose-label").textContent = selectedBody === "moon"
+    ? "Lunar dose"
+    : "Estimated dose";
   updateAlgorithmControl(site);
   updateCheckpointUI(site);
   renderCoordinateStatus();
@@ -899,15 +945,19 @@ function flyToSite(siteKey) {
   window.map.flyToBounds(siteData[siteKey].bounds, { duration: 1.2, padding: [24, 24] });
 }
 
-async function loadSiteData(siteKey) {
-  const processedRoot = `/data/processed/${siteKey}/`;
-  const costRoot = `data/${siteKey}/`;
+async function loadSiteData(metadata) {
+  const siteKey = metadata.key;
+  const gridPath = metadata.grid
+    ? `/${metadata.grid}`
+    : `/data/processed/${siteKey}/grid.json`;
+  const costPath = metadata.cost || `data/${siteKey}/cost.json`;
+  const costRoot = costPath.slice(0, costPath.lastIndexOf("/") + 1);
   const [grid, costMetadata] = await Promise.all([
-    fetchJson(`${processedRoot}grid.json`),
-    fetchJson(`${costRoot}cost.json`),
+    fetchJson(gridPath),
+    fetchJson(costPath),
   ]);
   const costFiles = [
-    "cost.bin",
+    costMetadata.cost_file || "cost.bin",
     costMetadata.clearance_files.cells,
     costMetadata.clearance_files.meters,
   ];
@@ -937,6 +987,127 @@ async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Could not load ${url}: HTTP ${response.status}`);
   return response.json();
+}
+
+function configureBodyUI(body, manifest) {
+  const isMoon = body === "moon";
+  selectedBody = body;
+  bodyManifest = manifest;
+  document.getElementById("body-select").value = body;
+  document.getElementById("imagery-layer-row").hidden = isMoon;
+  document.getElementById("backdrop-layer-row").hidden = !isMoon;
+  document.getElementById("support-layer-row").hidden = !isMoon;
+  document.getElementById("terrain-label").textContent = isMoon ? "Hillshade" : "Elevation";
+  document.getElementById("dose-label").textContent = isMoon ? "Lunar dose" : "Estimated dose";
+  document.getElementById("map").setAttribute(
+    "aria-label",
+    isMoon ? "Lunar south pole EVA planning map" : "Mars EVA planning map",
+  );
+  const dataNote = document.getElementById("body-data-note");
+  if (isMoon) {
+    const source = manifest.sites[0]?.source_products;
+    const roughness = manifest.layers.roughness;
+    const count = manifest.layers.count;
+    const siteSources = source
+      ? `${source.surface} and ${source.slope} (${source.source_resolution_m} m source; `
+        + `${source.routing_resolution_m} m routing grid). `
+      : "";
+    dataNote.textContent = `Real NASA products: ${roughness.product} `
+      + `(${roughness.resolution_m} m/pixel), ${count.product} `
+      + `(${count.resolution_m} m/pixel); ${siteSources}`
+      + `${manifest.labels.data_note} Not integrated: `
+      + `${manifest.labels.not_integrated.join(", ")}.`;
+    dataNote.hidden = false;
+    document.getElementById("body-legend-note").textContent =
+      "Red cells are slope, roughness or NoData hazards. The roughness backdrop "
+      + "is context only; LOLA return support marks observed laser returns. "
+      + "Habitat and targets are PLACEHOLDERS. Lunar dose is not computed.";
+  } else {
+    dataNote.textContent = "";
+    dataNote.hidden = true;
+    document.getElementById("body-legend-note").textContent =
+      "Red cells exceed the slope or roughness setting. DEM, imagery and the surrounding map are real NASA data; the surrounding map is lower resolution and context only. Habitat, targets, dose, radiation and walking speed remain placeholders or assumptions.";
+  }
+}
+
+function clearBodyLayers() {
+  for (const site of Object.values(siteLayers)) {
+    for (const layer of Object.values(site)) {
+      if (layer && window.map.hasLayer(layer)) window.map.removeLayer(layer);
+    }
+  }
+  for (const layer of [
+    layers.backdrop,
+    layers.boundaries,
+    layers.regions,
+    backdropLabel,
+  ]) {
+    if (layer && window.map.hasLayer(layer)) window.map.removeLayer(layer);
+  }
+  for (const key of Object.keys(siteLayers)) delete siteLayers[key];
+  for (const key of Object.keys(siteData)) delete siteData[key];
+  for (const key of Object.keys(layers)) delete layers[key];
+  backdropLabel = null;
+  regionLayer = null;
+  selectedSite = null;
+  pendingSite = null;
+}
+
+async function switchBody(body) {
+  if (body === selectedBody) return;
+  if (body !== "mars" && body !== "moon") {
+    throw new RangeError(`Unsupported body: ${body}`);
+  }
+  clearBodyLayers();
+  setRouteMode(false);
+  document.getElementById("load-status").textContent = `Loading ${body} data...`;
+
+  const isMoon = body === "moon";
+  const [backdrop, sourceManifest, regions] = isMoon
+    ? await Promise.all([
+      fetchJson("data/moon/backdrop.json"),
+      fetchJson("data/moon/body.json"),
+      fetchJson("data/moon/regions.json"),
+    ])
+    : await Promise.all([
+      fetchJson("data/backdrop.json"),
+      fetchJson("data/sites.json"),
+      Promise.resolve(null),
+    ]);
+  const manifest = isMoon
+    ? sourceManifest
+    : { ...sourceManifest, body: "mars", label: "Mars", radius_m: 3389500 };
+  configureBodyUI(body, manifest);
+  siteManifest = sourceManifest.sites;
+  if (!Array.isArray(siteManifest) || siteManifest.length === 0) {
+    throw new Error(`${body} site manifest does not contain any processed sites`);
+  }
+  const siteSelect = document.getElementById("site-select");
+  siteSelect.replaceChildren(...siteManifest.map((site) => {
+    const option = document.createElement("option");
+    option.value = site.key;
+    option.textContent = site.name;
+    return option;
+  }));
+  const defaultSite = sourceManifest.default_site;
+  if (!siteManifest.some((site) => site.key === defaultSite)) {
+    throw new Error(`${body} default site is missing from its manifest`);
+  }
+  siteSelect.value = defaultSite;
+  setGeoReference(backdrop, body, manifest.radius_m);
+  window.map.setMaxZoom(18);
+  addBackdrop(backdrop);
+  const paddedBackdropBounds = padMapBounds(backdropBounds);
+  const backdropMinZoom = window.map.getBoundsZoom(backdropBounds);
+  window.map.setMaxBounds(paddedBackdropBounds);
+  window.map.setMinZoom(backdropMinZoom);
+  await Promise.all(siteManifest.map((site) => loadSiteData(site)));
+  addSiteBoundaries();
+  if (regions) addRegionBoundaries(regions);
+  activateSite(defaultSite);
+  window.map.fitBounds(backdropBounds, { padding: [24, 24] });
+  document.getElementById("load-status").textContent =
+    isMoon ? "Moon products and route grid loaded." : "Mars products and route grids loaded.";
 }
 
 function addSiteBoundaries() {
@@ -971,6 +1142,28 @@ function addSiteBoundaries() {
 }
 
 function addBackdrop(backdrop) {
+  if (selectedBody === "moon") {
+    const bounds = boundsToMap(backdrop.bounds);
+    const roughness = makeImageOverlay(
+      bodyManifest.backdrop,
+      bounds,
+      "backdrop-roughness-pane",
+      { opacity: Number(document.getElementById("backdrop-opacity").value) },
+    ).addTo(window.map);
+    roughness._desiredOpacity = Number(document.getElementById("backdrop-opacity").value);
+    layers.backdrop = roughness;
+    backdropBounds = bounds;
+    const labelPoint = [bounds[1][0] - (bounds[1][0] - bounds[0][0]) * .04, bounds[0][1]];
+    backdropLabel = L.marker(labelPoint, {
+      icon: L.divIcon({
+        className: "backdrop-context-label",
+        html: "LOLA roughness backdrop · 1,000 m/pixel<br>context only; no route data",
+      }),
+      interactive: false,
+      pane: "boundaries-pane",
+    }).addTo(window.map);
+    return;
+  }
   const imagery = backdrop.layers.imagery;
   const hillshade = backdrop.layers.hillshade;
   const imageryBounds = boundsToMap(imagery.bounds);
@@ -982,14 +1175,14 @@ function addBackdrop(backdrop) {
     opacity: .7,
   }).addTo(window.map);
   backdropBounds = mapBoundsUnion([imageryBounds, hillshadeBounds]);
-  layers.backdrop = L.layerGroup([imageryLayer, hillshadeLayer]);
+  layers.backdrop = L.layerGroup([imageryLayer, hillshadeLayer]).addTo(window.map);
   const spanY = backdropBounds[1][0] - backdropBounds[0][0];
   const spanX = backdropBounds[1][1] - backdropBounds[0][1];
   const labelPoint = [
     backdropBounds[1][0] - spanY * .1,
     backdropBounds[0][1] + spanX * .04,
   ];
-  L.marker(labelPoint, {
+  backdropLabel = L.marker(labelPoint, {
     icon: L.divIcon({
       className: "backdrop-context-label",
       html: "Surrounding area: low resolution,<br>context only, no route data · real NASA data",
@@ -997,6 +1190,36 @@ function addBackdrop(backdrop) {
     interactive: false,
     pane: "boundaries-pane",
   }).addTo(window.map);
+}
+
+function addRegionBoundaries(regions) {
+  regionLayer = L.geoJSON(regions, {
+    style: {
+      color: "#b8a8e8",
+      weight: 1,
+      opacity: .7,
+      fill: false,
+      pane: "boundaries-pane",
+    },
+    onEachFeature(feature, layer) {
+      const { name, site_key: siteKey, has_elevation_data: hasData } = feature.properties;
+      layer.bindTooltip(name, {
+        permanent: true,
+        direction: "center",
+        className: "site-boundary-label",
+      });
+      if (hasData && siteData[siteKey]) {
+        layer.on("click", () => flyToSite(siteKey));
+      }
+      layer.on("mouseover", () => {
+        if (!hasData || !siteData[siteKey]) {
+          layer.setTooltipContent(`${name} · no elevation data loaded`);
+        }
+      });
+      layer.on("mouseout", () => layer.setTooltipContent(name));
+    },
+  }).addTo(window.map);
+  layers.regions = regionLayer;
 }
 
 async function loadPlanner() {
@@ -1008,6 +1231,8 @@ async function loadPlanner() {
     throw new Error("Site manifest does not contain any sites");
   }
   siteManifest = manifest.sites;
+  bodyManifest = { ...manifest, body: "mars", label: "Mars", radius_m: 3389500 };
+  configureBodyUI("mars", bodyManifest);
   const siteSelect = document.getElementById("site-select");
   siteSelect.replaceChildren(...siteManifest.map((site) => {
     const option = document.createElement("option");
@@ -1019,7 +1244,7 @@ async function loadPlanner() {
     throw new Error("Default site is missing from the site manifest");
   }
   siteSelect.value = manifest.default_site;
-  setGeoReference(backdrop);
+  setGeoReference(backdrop, "mars", bodyManifest.radius_m);
   window.map = L.map("map", {
     crs: L.CRS.Simple,
     minZoom: -12,
@@ -1032,10 +1257,12 @@ async function loadPlanner() {
   const paneOrder = {
     "backdrop-imagery": 100,
     "backdrop-hillshade": 110,
+    "backdrop-roughness": 120,
     imagery: 205,
     terrain: 210,
     slope: 220,
     hazard: 230,
+    support: 240,
     boundaries: 440,
     route: 450,
     targets: 460,
@@ -1051,6 +1278,14 @@ async function loadPlanner() {
   window.map.setMinZoom(backdropMinZoom);
 
   siteSelect.addEventListener("change", () => flyToSite(siteSelect.value));
+  document.getElementById("body-select").addEventListener("change", (event) => {
+    switchBody(event.target.value).catch((error) => {
+      console.error(error);
+      event.target.value = selectedBody;
+      document.getElementById("load-status").textContent =
+        `Could not switch body: ${error.message}`;
+    });
+  });
   const routeChip = document.querySelector(".map-route-chip");
   L.DomEvent.disableClickPropagation(routeChip);
   document.getElementById("add-checkpoint").addEventListener("click", () => {
@@ -1113,8 +1348,15 @@ async function loadPlanner() {
   setLayerControl("imagery", "imagery-toggle", "imagery-opacity");
   setLayerControl("slope", "slope-toggle", "slope-opacity");
   setLayerControl("hazard", "hazard-toggle", "hazard-opacity");
+  setLayerControl("support", "support-toggle", "support-opacity");
   setLayerControl("route", "route-toggle", "route-opacity");
   setLayerControl("targets", "targets-toggle", "targets-opacity");
+  document.getElementById("backdrop-toggle").addEventListener("change", (event) => {
+    setLayerVisible(layers.backdrop, event.target.checked);
+  });
+  document.getElementById("backdrop-opacity").addEventListener("input", (event) => {
+    setLayerOpacity(layers.backdrop, Number(event.target.value));
+  });
   const checkpointToggle = document.getElementById("checkpoint-toggle");
   checkpointToggle.addEventListener("click", () => {
     const chip = document.querySelector(".map-route-chip");
@@ -1139,29 +1381,32 @@ async function loadPlanner() {
     const location = mapToLatLon(y, x);
     const cell = mapToGrid(site, y, x);
     const habitat = gridToMap(site, site.grid.habitat.row, site.grid.habitat.col);
-    const rangeKm = Math.hypot(
-      y - habitat[0],
-      x - habitat[1],
-    ) / 1000;
+    const rangeKm = selectedBody === "moon"
+      ? distanceToSouthPoleKm(location.lat)
+      : Math.hypot(y - habitat[0], x - habitat[1]) / 1000;
     const latitude = location.lat.toFixed(5);
     const longitude = location.lon.toFixed(5);
     document.getElementById("coordinate-readout").textContent =
-      `Lat ${latitude} · Lon ${longitude}`;
+      selectedBody === "moon"
+        ? `Lat ${latitude} · Lon ${longitude} · `
+          + `${rangeKm.toFixed(2)} km to south pole`
+        : `Lat ${latitude} · Lon ${longitude}`;
     renderCoordinateStatus({
       latitude,
       longitude,
       row: cell.row,
       col: cell.col,
       rangeKm,
+      rangeLabel: selectedBody === "moon" ? "TO SOUTH POLE" : "FROM HABITAT",
       gridLabel: cell.inside ? `GRID ${cell.row}, ${cell.col}` : "SURROUNDING AREA",
     });
   });
-  await Promise.all(siteManifest.map(({ key }) => loadSiteData(key)));
+  await Promise.all(siteManifest.map((site) => loadSiteData(site)));
   addSiteBoundaries();
   activateSite(siteSelect.value);
   window.map.fitBounds(backdropBounds, { padding: [24, 24] });
   addScaleBar(window.map);
-  addNavigationDock(window.map, backdropBounds, backdropMinZoom);
+  addNavigationDock(window.map);
 }
 
 setupSidebarResizer();

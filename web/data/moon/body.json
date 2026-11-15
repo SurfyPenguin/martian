@@ -1,0 +1,152 @@
+{
+  "body": "moon",
+  "label": "Moon",
+  "radius_m": 1737400.0,
+  "default_site": "site_01",
+  "sites": [
+    {
+      "key": "site_01",
+      "name": "Connecting Ridge",
+      "descriptor": "40% hazard, 8.3% of source 5 m pixels have LOLA returns",
+      "region_id": 6,
+      "bounds": {
+        "min_x": -13500,
+        "min_y": -14500,
+        "max_x": -8500,
+        "max_y": -9500
+      },
+      "grid": "data/processed/moon/site_01/grid.json",
+      "cost": "data/moon/site_01/cost.json",
+      "assets": {
+        "hillshade": "data/processed/moon/site_01/hillshade.png",
+        "slope": "data/processed/moon/site_01/slope.png",
+        "hazard": "data/processed/moon/site_01/hazard.png",
+        "support": "data/processed/moon/site_01/support.png",
+        "elevation": "data/processed/moon/site_01/elevation.png"
+      },
+      "metrics": {
+        "data_status": "REAL - NASA lunar raster products; placeholders are labeled",
+        "site": "site_01",
+        "site_name": "Connecting Ridge",
+        "center_xy_m": {
+          "x": -10999.99998430812,
+          "y": -11999.999978165917
+        },
+        "bounds_xy_m": {
+          "min_x": -13500,
+          "min_y": -14500,
+          "max_x": -8500,
+          "max_y": -9500
+        },
+        "source_raster_bounds_xy_m": {
+          "min_x": -19000.0,
+          "min_y": -20000.0,
+          "max_x": -3000.0,
+          "max_y": -4000.0
+        },
+        "cell_size_m": {
+          "x": 10,
+          "y": 10
+        },
+        "elevation_min": 1108.2420654296875,
+        "elevation_max": 1959.142578125,
+        "elevation_std": 183.84014892578125,
+        "nodata_cells": 0,
+        "slope_source_mean_absolute_difference_degrees": 0.4109657406806946,
+        "slope_comparison_cells": 250000,
+        "lola_return_pixel_fraction": 0.083265,
+        "hazard_cells": 99837,
+        "hazard_fraction": 0.399348,
+        "largest_passable_component_fraction": 0.424448,
+        "chokepoints": 1,
+        "safety_margin_cells": 2,
+        "route_distance_km": 8.473006486383879,
+        "route_time_h": 2.824335495461293,
+        "return_margin_h": 1.175664504538707,
+        "within_eva_limit": true,
+        "dose_status": "not computed: no lunar radiation source integrated",
+        "thresholds": {
+          "max_walkable_slope_deg": 15.0,
+          "max_roughness_m": 15.0
+        },
+        "assumptions": [
+          "walking speed",
+          "EVA hours",
+          "slope limit",
+          "roughness limit",
+          "habitat and targets"
+        ]
+      },
+      "source_products": {
+        "surface": "site_01_final_adj_5mpp_surf.tif",
+        "slope": "site_01_final_adj_5mpp_slp.tif",
+        "source_resolution_m": 5,
+        "routing_resolution_m": 10
+      }
+    }
+  ],
+  "projection_checks": [
+    {
+      "region_id": 5,
+      "longitude": -84.24543467,
+      "latitude": -88.71734521,
+      "x": -38699.999883968194,
+      "y": 3899.9999875548465,
+      "python_round_trip_error_m": 0.0
+    },
+    {
+      "region_id": 6,
+      "longitude": -101.88865804,
+      "latitude": -89.35969194,
+      "x": -18999.99992529707,
+      "y": -3999.9999844019026,
+      "python_round_trip_error_m": 0.0
+    },
+    {
+      "region_id": 8,
+      "longitude": 118.61045967,
+      "latitude": -89.17359087,
+      "x": 21999.99993388545,
+      "y": -11999.9999659477,
+      "python_round_trip_error_m": 6.215195584114051e-12
+    }
+  ],
+  "layers": {
+    "roughness": {
+      "label": "Roughness backdrop",
+      "product": "LDRM_80S_1000MPP_ADJ_ROUGH_100M.tiff",
+      "resolution_m": 1000
+    },
+    "count": {
+      "label": "LOLA laser-return support",
+      "product": "LRO_LOLA_Count_SPole875_5mp_v04.tif",
+      "resolution_m": 5
+    },
+    "site_resolution_m": 5,
+    "routing_resolution_m": 10,
+    "slope_uncertainty_degrees": [
+      1.5,
+      2.5
+    ]
+  },
+  "backdrop": "web/data/moon/roughness_backdrop.png",
+  "backdrop_metadata": "data/moon/backdrop.json",
+  "regions": "data/moon/regions.json",
+  "labels": {
+    "data_support": "LOLA laser-return support",
+    "dose": "not computed: no lunar radiation source integrated",
+    "assumptions": [
+      "walking speed",
+      "EVA hours",
+      "slope limit",
+      "habitat and targets are PLACEHOLDERS"
+    ],
+    "data_note": "Most 5 m surface pixels are interpolated; the support layer shows where measured LOLA returns exist. Slope uncertainty is roughly 1.5 to 2.5 degrees.",
+    "not_integrated": [
+      "illumination",
+      "temperature",
+      "radiation",
+      "imagery"
+    ]
+  }
+}

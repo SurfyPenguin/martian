@@ -256,6 +256,19 @@ def astar(
     x_size_m: float,
     y_size_m: float,
 ) -> list[tuple[int, int]]:
+    return astar_with_metrics(
+        start, goal, walkable, costs, x_size_m, y_size_m
+    )[0]
+
+
+def astar_with_metrics(
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    walkable: np.ndarray,
+    costs: np.ndarray,
+    x_size_m: float,
+    y_size_m: float,
+) -> tuple[list[tuple[int, int]], int]:
     if not walkable[start] or not walkable[goal]:
         raise ValueError(f"Route endpoint is not walkable: {start} -> {goal}")
 
@@ -268,16 +281,18 @@ def astar(
     queue = [(heuristic(start), 0.0, start)]
     came_from: dict[tuple[int, int], tuple[int, int]] = {}
     cost_so_far = {start: 0.0}
+    explored = 0
     while queue:
         _, current_cost, current = heapq.heappop(queue)
+        if current_cost > cost_so_far[current]:
+            continue
+        explored += 1
         if current == goal:
             path = [current]
             while current in came_from:
                 current = came_from[current]
                 path.append(current)
-            return list(reversed(path))
-        if current_cost > cost_so_far[current]:
-            continue
+            return list(reversed(path)), explored
         for next_cell in neighbours(*current, *walkable.shape):
             if not walkable[next_cell]:
                 continue
