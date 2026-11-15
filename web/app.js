@@ -5,6 +5,7 @@ let siteManifest = [];
 let bodyManifest = null;
 let selectedBody = "mars";
 let regionLayer = null;
+let moonLayers = null;
 let backdropLabel = null;
 const ZOOM_SLIDER_MIN_PERCENT = 100;
 const ZOOM_SLIDER_MAX_PERCENT = 300;
@@ -742,7 +743,10 @@ function buildSiteLayers(siteKey, grid, routeGrid) {
   site.endpointSnapMessage = snappedEndpoints.length
     ? `${snappedEndpoints.length} mission point(s) snapped outside the safety margin.`
     : "";
-  site.bounds = boundsToMap(grid.geo_reference.bounds);
+  // Moon geometry comes from web/data/moon/layers.json; the processed grid
+  // remains the row/col -> meters mapping for routing. Mars keeps grid bounds.
+  const moonLayerBounds = moonLayers?.sites?.[siteKey]?.hillshade?.bounds_m;
+  site.bounds = boundsToMap(moonLayerBounds ?? grid.geo_reference.bounds);
   const route = L.layerGroup().addTo(window.map);
   const targets = L.layerGroup().addTo(window.map);
   const checkpointMarkers = L.layerGroup().addTo(targets);
@@ -1049,6 +1053,7 @@ function clearBodyLayers() {
   for (const key of Object.keys(layers)) delete layers[key];
   backdropLabel = null;
   regionLayer = null;
+  moonLayers = null;
   selectedSite = null;
   pendingSite = null;
 }
@@ -1063,17 +1068,19 @@ async function switchBody(body) {
   document.getElementById("load-status").textContent = `Loading ${body} data...`;
 
   const isMoon = body === "moon";
-  const [backdrop, sourceManifest, regions] = isMoon
+  const [backdrop, sourceManifest, regions, layerBounds] = isMoon
     ? await Promise.all([
       fetchJson("data/moon/backdrop.json"),
       fetchJson("data/moon/body.json"),
       fetchJson("data/moon/regions.json"),
+      fetchJson("data/moon/layers.json"),
     ])
     : await Promise.all([
       fetchJson("data/backdrop.json"),
       fetchJson("data/sites.json"),
       Promise.resolve(null),
     ]);
+  moonLayers = isMoon ? layerBounds : null;
   const manifest = isMoon
     ? sourceManifest
     : { ...sourceManifest, body: "mars", label: "Mars", radius_m: 3389500 };
@@ -1143,9 +1150,14 @@ function addSiteBoundaries() {
 
 function addBackdrop(backdrop) {
   if (selectedBody === "moon") {
-    const bounds = boundsToMap(backdrop.bounds);
+    // Single geometry source: web/data/moon/layers.json.
+    const layerInfo = moonLayers?.backdrop;
+    if (!layerInfo) {
+      throw new Error("Moon mode requires web/data/moon/layers.json bounds");
+    }
+    const bounds = boundsToMap(layerInfo.bounds_m);
     const roughness = makeImageOverlay(
-      bodyManifest.backdrop,
+      layerInfo.image,
       bounds,
       "backdrop-roughness-pane",
       { opacity: Number(document.getElementById("backdrop-opacity").value) },

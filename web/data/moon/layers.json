@@ -1,0 +1,375 @@
+{
+  "coordinate_system": "Moon south polar stereographic meters",
+  "radius_m": 1737400.0,
+  "crs_source": "data/raw/moon/site_01_final_adj_5mpp_surf.tif",
+  "crs_wkt": "PROJCRS[\"unnamed\",BASEGEOGCRS[\"unnamed ellipse\",DATUM[\"unknown\",ELLIPSOID[\"unnamed\",1737400,0,LENGTHUNIT[\"metre\",1,ID[\"EPSG\",9001]]]],PRIMEM[\"Greenwich\",0,ANGLEUNIT[\"degree\",0.0174532925199433,ID[\"EPSG\",9122]]]],CONVERSION[\"unnamed\",METHOD[\"Polar Stereographic (variant B)\",ID[\"EPSG\",9829]],PARAMETER[\"Latitude of standard parallel\",-90,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8832]],PARAMETER[\"Longitude of origin\",0,ANGLEUNIT[\"degree\",0.0174532925199433],ID[\"EPSG\",8833]],PARAMETER[\"False easting\",0,LENGTHUNIT[\"metre\",1],ID[\"EPSG\",8806]],PARAMETER[\"False northing\",0,LENGTHUNIT[\"metre\",1],ID[\"EPSG\",8807]]],CS[Cartesian,2],AXIS[\"easting\",north,ORDER[1],LENGTHUNIT[\"metre\",1]],AXIS[\"northing\",north,ORDER[2],LENGTHUNIT[\"metre\",1]]]",
+  "backdrop": {
+    "raster": "data/raw/moon/LDRM_80S_1000MPP_ADJ_ROUGH_100M.tiff",
+    "crs_name": "PROJCS[\"Moon (2015) - Sphere / Ocentric / South Polar\",GEOGCS[\"Moon (2015) - Sphere / Ocentric\",DATUM[\"Moon (2015) - Sphere\",SPHEROID[\"Moon (2015) - Sphere\",1737400,0,AUTHORITY[\"IAU\",\"30100\"]],AUTHORITY[\"IAU\",\"30100\"]],PRIMEM[\"Reference Meridian\",0,AUTHORITY[\"IAU\",\"30100\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"IAU\",\"30100\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH],AUTHORITY[\"IAU\",\"30135\"]]",
+    "area_or_point": "Area",
+    "half_pixel_correction_applied": false,
+    "pixel_size_m": {
+      "x": 1000.0,
+      "y": 1000.0
+    },
+    "shape": [
+      608,
+      608
+    ],
+    "bounds_m": {
+      "min_x": -304000.0,
+      "min_y": -304000.0,
+      "max_x": 304000.0,
+      "max_y": 304000.0
+    },
+    "image": "web/data/moon/roughness_backdrop.png",
+    "image_resolution_m": 2000,
+    "data_status": "REAL - NASA LOLA roughness product; context only"
+  },
+  "sites": {
+    "site_01": {
+      "hillshade": {
+        "raster": "data/processed/moon/site_01/elevation.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -13500.0,
+          "min_y": -14500.0,
+          "max_x": -8500.0,
+          "max_y": -9500.0
+        },
+        "image": "data/processed/moon/site_01/hillshade.png"
+      },
+      "slope": {
+        "raster": "data/processed/moon/site_01/slope.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -13500.0,
+          "min_y": -14500.0,
+          "max_x": -8500.0,
+          "max_y": -9500.0
+        },
+        "image": "data/processed/moon/site_01/slope.png"
+      },
+      "hazard": {
+        "raster": "data/processed/moon/site_01/hazard.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -13500.0,
+          "min_y": -14500.0,
+          "max_x": -8500.0,
+          "max_y": -9500.0
+        },
+        "image": "data/processed/moon/site_01/hazard.png"
+      },
+      "support": {
+        "raster": "data/processed/moon/site_01/support.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -13500.0,
+          "min_y": -14500.0,
+          "max_x": -8500.0,
+          "max_y": -9500.0
+        },
+        "image": "data/processed/moon/site_01/support.png"
+      }
+    },
+    "site_04": {
+      "hillshade": {
+        "raster": "data/processed/moon/site_04/elevation.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -3500.0,
+          "min_y": -9500.0,
+          "max_x": 1500.0,
+          "max_y": -4500.0
+        },
+        "image": "data/processed/moon/site_04/hillshade.png"
+      },
+      "slope": {
+        "raster": "data/processed/moon/site_04/slope.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -3500.0,
+          "min_y": -9500.0,
+          "max_x": 1500.0,
+          "max_y": -4500.0
+        },
+        "image": "data/processed/moon/site_04/slope.png"
+      },
+      "hazard": {
+        "raster": "data/processed/moon/site_04/hazard.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -3500.0,
+          "min_y": -9500.0,
+          "max_x": 1500.0,
+          "max_y": -4500.0
+        },
+        "image": "data/processed/moon/site_04/hazard.png"
+      },
+      "support": {
+        "raster": "data/processed/moon/site_04/support.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -3500.0,
+          "min_y": -9500.0,
+          "max_x": 1500.0,
+          "max_y": -4500.0
+        },
+        "image": "data/processed/moon/site_04/support.png"
+      }
+    },
+    "site_07": {
+      "hillshade": {
+        "raster": "data/processed/moon/site_07/elevation.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": 27500.0,
+          "min_y": -22510.0,
+          "max_x": 32500.0,
+          "max_y": -17510.0
+        },
+        "image": "data/processed/moon/site_07/hillshade.png"
+      },
+      "slope": {
+        "raster": "data/processed/moon/site_07/slope.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": 27500.0,
+          "min_y": -22510.0,
+          "max_x": 32500.0,
+          "max_y": -17510.0
+        },
+        "image": "data/processed/moon/site_07/slope.png"
+      },
+      "hazard": {
+        "raster": "data/processed/moon/site_07/hazard.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": 27500.0,
+          "min_y": -22510.0,
+          "max_x": 32500.0,
+          "max_y": -17510.0
+        },
+        "image": "data/processed/moon/site_07/hazard.png"
+      },
+      "support": {
+        "raster": "data/processed/moon/site_07/support.tif",
+        "crs_name": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": 27500.0,
+          "min_y": -22510.0,
+          "max_x": 32500.0,
+          "max_y": -17510.0
+        },
+        "image": "data/processed/moon/site_07/support.png"
+      }
+    },
+    "sl3": {
+      "hillshade": {
+        "raster": "data/processed/moon/sl3/elevation.tif",
+        "crs_name": "PROJCS[\"unknown\",GEOGCS[\"unknown\",DATUM[\"unknown\",SPHEROID[\"unknown\",1737400,0]],PRIMEM[\"Reference meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -31210.0,
+          "min_y": -8610.0,
+          "max_x": -26210.0,
+          "max_y": -3610.0
+        },
+        "image": "data/processed/moon/sl3/hillshade.png"
+      },
+      "slope": {
+        "raster": "data/processed/moon/sl3/slope.tif",
+        "crs_name": "PROJCS[\"unknown\",GEOGCS[\"unknown\",DATUM[\"unknown\",SPHEROID[\"unknown\",1737400,0]],PRIMEM[\"Reference meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -31210.0,
+          "min_y": -8610.0,
+          "max_x": -26210.0,
+          "max_y": -3610.0
+        },
+        "image": "data/processed/moon/sl3/slope.png"
+      },
+      "hazard": {
+        "raster": "data/processed/moon/sl3/hazard.tif",
+        "crs_name": "PROJCS[\"unknown\",GEOGCS[\"unknown\",DATUM[\"unknown\",SPHEROID[\"unknown\",1737400,0]],PRIMEM[\"Reference meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -31210.0,
+          "min_y": -8610.0,
+          "max_x": -26210.0,
+          "max_y": -3610.0
+        },
+        "image": "data/processed/moon/sl3/hazard.png"
+      },
+      "support": {
+        "raster": "data/processed/moon/sl3/support.tif",
+        "crs_name": "PROJCS[\"unknown\",GEOGCS[\"unknown\",DATUM[\"unknown\",SPHEROID[\"unknown\",1737400,0]],PRIMEM[\"Reference meridian\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+        "area_or_point": "Area",
+        "half_pixel_correction_applied": false,
+        "pixel_size_m": {
+          "x": 10.0,
+          "y": 10.0
+        },
+        "shape": [
+          500,
+          500
+        ],
+        "bounds_m": {
+          "min_x": -31210.0,
+          "min_y": -8610.0,
+          "max_x": -26210.0,
+          "max_y": -3610.0
+        },
+        "image": "data/processed/moon/sl3/support.png"
+      }
+    }
+  }
+}
