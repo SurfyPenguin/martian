@@ -3,6 +3,7 @@
 ## Scope (MVP, solo, ~1 day)
 - Four NASA-data sites in Gale Crater: Gale crater floor, Southern box,
   Rough terrain box, and Dune-edge box
+- Moon mode: four named/unmatched south-pole regions with LOLA data support
 - CTX imagery, elevation, slope/roughness hazard, route, and target layers
 - Up to three hazard-safe route options between three placeholder science targets
   per site, with an adjustable algorithm and safety margin
@@ -148,23 +149,45 @@
 - Measured site3/4 processing and verification memory; the largest final
   verification RSS was 296,728 KB. Generated outputs remain under 5 MB, and
   no raw inputs or GDAL sidecars are included
+- Audited the Moon source rasters and named-region GeoJSON in
+  `docs/MOON_DATA_NOTES.md`; confirmed south-polar stereographic meters, the
+  1,737,400 m lunar radius, all four site boxes' fit, and per-site LOLA
+  support fractions with windowed reads only
+- Added the Moon body mode with site_01 (Connecting Ridge) processed end to
+  end: 5 x 5 km planning box, 10 m routing grid, supplied-slope and
+  elevation-derived roughness comparison, one shared hazard mask, hillshade/
+  slope/hazard/support PNGs, browser cost grids, and the 1,000 m/pixel LOLA
+  roughness backdrop
+- Added the Moon body switch, shared south-polar-stereographic map
+  coordinates with a JS inverse projection and south-pole distance readout,
+  all 13 named-region outlines with click-to-fly on DEM-backed regions, and
+  verified Python/JS coordinate round trips agree within 1 m
+- Added a percentile-clipped, NoData-transparent roughness backdrop under
+  3 MB with recorded 2nd-to-98th percentiles and backdrop checks in both
+  Moon verifiers
+- Processed and verified the unmatched site_04 raster (labeled as unmatched,
+  not relabeled), site_07 (Peak Near Shakleton), and sl3 (Connecting Ridge
+  Extension) without changing any threshold; per-site metrics, edge cases,
+  and A*/Dijkstra parity are in `docs/MOON_TESTS.md`
+- Verified all four Moon sites in Python and JavaScript: auto routes and 20
+  random checkpoint sets per site with zero hazard cells, hazard/margin
+  snapping, actual disconnected pockets returning NO SAFE PATH, over-limit
+  round trips flagged, and coordinate round trips within 1 m
+- Verified the Mars regression after Moon work: hazard, algorithm, and edge
+  case checks all pass with no console errors in either body mode
+- Documented Moon mode in README, PLAN, DATA_SCHEMA, and HANDOFF; recorded
+  final verification and memory measurements in `docs/MOON_TESTS.md`
 
 ## In progress
-- Moon mode: source data audit is complete and `site_01` is processed with
-  working body switching, lunar projection, layers, and route verification.
-  The unmatched `site_04` raster is also processed and verified. `site_07`,
-  with its source GeoJSON name preserved, and `sl3` are also processed and
-  passed Python/JavaScript route checks. Final browser checks and documentation
-  remain.
+- Nothing currently; the Moon mode is processed, verified, and documented.
 
 ## Blocked on me
 - Habitat and target coordinates are placeholders pending mission-provided points
 - Radiation and weather sources are not integrated yet
 
 ## Next
-1. Verify all four Moon sites in the browser and repeat a checkpoint route
-   check on each Mars site
-2. Replace placeholder habitat and target coordinates only when verified
+1. Replace placeholder habitat and target coordinates only when verified
    mission points are available
-3. Record product IDs and acquisition dates if the source provenance is provided
-4. Add validated radiation or weather sources before presenting them as layers
+2. Record product IDs and acquisition dates if the source provenance is provided
+3. Add validated radiation or weather sources before presenting them as layers
+4. For UI changes, re-run the body-switch browser checks and a mobile viewport
