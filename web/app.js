@@ -9,9 +9,33 @@ let selectedSite = null;
 let pendingSite = null;
 let backdropBounds = null;
 let routeMode = false;
+const ALGORITHM_DESCRIPTIONS = {
+  astar: "A* uses an octile-distance heuristic and is guaranteed optimal for this cost grid.",
+  dijkstra: "Dijkstra expands without a heuristic; it is guaranteed optimal but explores more cells.",
+  weighted: "Weighted A* biases toward the goal for speed; it is near-optimal, not guaranteed optimal.",
+};
 
 function formatNumber(value, unit, digits = 2) {
   return `${Number(value).toFixed(digits)} ${unit}`;
+}
+
+function selectedRoute(site) {
+  return site.routeChoices.find((choice) => choice.key === site.selectedRouteKey)
+    ?? site.routeChoices[0];
+}
+
+function updateAlgorithmControl(site) {
+  const algorithm = document.getElementById("route-algorithm");
+  const description = site.algorithm === "weighted"
+    ? `${ALGORITHM_DESCRIPTIONS.weighted} Current epsilon: ${site.epsilon.toFixed(1)}.`
+    : ALGORITHM_DESCRIPTIONS[site.algorithm];
+  algorithm.value = site.algorithm;
+  algorithm.title = description;
+  document.getElementById("algorithm-description").textContent = description;
+  const epsilonControl = document.getElementById("weighted-epsilon-control");
+  epsilonControl.hidden = site.algorithm !== "weighted";
+  document.getElementById("weighted-epsilon").value = String(site.epsilon);
+  document.getElementById("weighted-epsilon-value").textContent = site.epsilon.toFixed(1);
 }
 
 function makeImageOverlay(path, bounds, pane, options = {}) {
@@ -258,31 +282,29 @@ function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm, gridLa
     + `<span class="statusbar-distance">FROM HABITAT ${rangeKm.toFixed(2)} KM</span>`;
 }
 
-function routeCellCost(site, row, col) {
-  return site.routeGrid.costs[row * site.routeGrid.cols + col];
-}
-
-function nearestWalkableCell(site, row, col) {
-  if (routeCellCost(site, row, col) >= 0) return { row, col, distanceCells: 0 };
+function nearestFreeCell(site, row, col, safetyMarginCells = site.safetyMarginCells) {
   let nearest = null;
-  for (let rowOffset = -5; rowOffset <= 5; rowOffset += 1) {
-    for (let colOffset = -5; colOffset <= 5; colOffset += 1) {
-      if (rowOffset * rowOffset + colOffset * colOffset > 25) continue;
-      const nextRow = row + rowOffset;
-      const nextCol = col + colOffset;
-      if (nextRow < 0 || nextRow >= site.routeGrid.rows
-        || nextCol < 0 || nextCol >= site.routeGrid.cols
-        || routeCellCost(site, nextRow, nextCol) < 0) continue;
-      const distanceSquared = (rowOffset * site.routeGrid.cellSizeM.y) ** 2
-        + (colOffset * site.routeGrid.cellSizeM.x) ** 2;
-      if (!nearest || distanceSquared < nearest.distanceSquared) {
-        nearest = {
-          row: nextRow,
-          col: nextCol,
-          distanceCells: Math.hypot(rowOffset, colOffset),
-          distanceSquared,
-        };
-      }
+  for (let index = 0; index < site.routeGrid.costs.length; index += 1) {
+    const nextRow = Math.floor(index / site.routeGrid.cols);
+    const nextCol = index % site.routeGrid.cols;
+    if (!RoutePlanner.isWalkable(
+      site.routeGrid,
+      nextRow,
+      nextCol,
+      safetyMarginCells,
+    )) continue;
+    const rowOffset = nextRow - row;
+    const colOffset = nextCol - col;
+    const distanceSquared = (rowOffset * site.routeGrid.cellSizeM.y) ** 2
+      + (colOffset * site.routeGrid.cellSizeM.x) ** 2;
+    if (!nearest || distanceSquared < nearest.distanceSquared) {
+      nearest = {
+        row: nextRow,
+        col: nextCol,
+        distanceCells: Math.hypot(rowOffset, colOffset),
+        distanceMeters: Math.sqrt(distanceSquared),
+        distanceSquared,
+      };
     }
   }
   return nearest;
@@ -306,16 +328,49 @@ function setRouteMode(enabled) {
 }
 
 function recalculateSiteRoute(site, changedCheckpointIndex = null) {
+  const previousPlan = site.plan;
   site.plan = RoutePlanner.planRoute(
     site.routeGrid,
     site.grid.habitat,
     site.checkpoints,
     site.returnToHabitat,
-    changedCheckpointIndex === null ? null : site.plan,
+    changedCheckpointIndex === null ? null : previousPlan,
     changedCheckpointIndex,
+    site.safetyMarginCells,
+    { algorithm: site.algorithm, epsilon: site.epsilon },
   );
+  site.selectedRouteKey = "fastest";
+  site.routeChoices = [{ key: "fastest", name: "Fastest", plan: site.plan }];
+  const requestId = site.alternativesRequestId + 1;
+  site.alternativesRequestId = requestId;
   if (selectedSite === site.key) updateSiteSummary(site);
   else updateCheckpointUI(site);
+  setRouteMessage("Fastest route ready; calculating alternatives.");
+  window.setTimeout(() => {
+    if (site.alternativesRequestId !== requestId) return;
+    const choices = RoutePlanner.computeAlternatives(
+      site.routeGrid,
+      site.grid.habitat,
+      site.checkpoints,
+      site.returnToHabitat,
+      site.plan,
+      {
+        safetyMarginCells: site.safetyMarginCells,
+        algorithm: site.algorithm,
+        epsilon: site.epsilon,
+      },
+    );
+    if (site.alternativesRequestId !== requestId) return;
+    site.routeChoices = choices;
+    if (selectedSite === site.key) updateSiteSummary(site);
+    else updateCheckpointUI(site);
+    if (document.getElementById("route-status").textContent
+      === "Fastest route ready; calculating alternatives.") {
+      setRouteMessage(choices.length === 1 && site.plan.timeH !== null
+        ? "Only one valid route found for this checkpoint sequence."
+        : site.endpointSnapMessage || "");
+    }
+  }, 0);
 }
 
 function removeCheckpoint(site, index) {
@@ -334,15 +389,15 @@ function addCheckpointAt(latlng) {
     setRouteMessage("Outside planning area, no route data.", true);
     return;
   }
-  const snapped = nearestWalkableCell(site, cell.row, cell.col);
+  const snapped = nearestFreeCell(site, cell.row, cell.col);
   if (!snapped) {
-    setRouteMessage("No walkable cell within 5 cells; checkpoint not added.", true);
+    setRouteMessage("No free cell remains at this safety margin.", true);
     return;
   }
   site.checkpoints.push({ row: snapped.row, col: snapped.col });
   recalculateSiteRoute(site);
   setRouteMessage(snapped.distanceCells
-    ? `Checkpoint added and snapped ${snapped.distanceCells.toFixed(1)} cells to walkable ground.`
+    ? `Checkpoint added and snapped ${snapped.distanceMeters.toFixed(1)} m clear of hazards.`
     : `Checkpoint ${site.checkpoints.length} added; route recalculated.`);
 }
 
@@ -373,7 +428,8 @@ function renderCheckpointTrack(site) {
 }
 
 function renderCheckpointDetails(site) {
-  const { grid, plan } = site;
+  const { grid } = site;
+  const plan = selectedRoute(site).plan;
   const details = [
     { id: "habitat", label: "Habitat", point: grid.habitat, leg: null },
     ...site.checkpoints.map((point, index) => ({
@@ -450,19 +506,19 @@ function renderCheckpointMarkers(site) {
       const current = site.checkpoints[index];
       const cell = mapToGrid(site, event.target.getLatLng().lat, event.target.getLatLng().lng);
       const snapped = cell.inside
-        ? nearestWalkableCell(site, cell.row, cell.col)
+        ? nearestFreeCell(site, cell.row, cell.col)
         : null;
       if (!snapped) {
         marker.setLatLng(gridToMap(site, current.row, current.col));
         setRouteMessage(cell.inside
-          ? "No walkable cell within 5 cells; checkpoint kept at its previous location."
+          ? "No free cell remains at this safety margin; checkpoint kept at its previous location."
           : "Checkpoint must remain inside the active site.", true);
         return;
       }
       site.checkpoints[index] = { row: snapped.row, col: snapped.col };
       recalculateSiteRoute(site, index);
       setRouteMessage(snapped.distanceCells
-        ? `Checkpoint moved and snapped ${snapped.distanceCells.toFixed(1)} cells to walkable ground.`
+        ? `Checkpoint moved ${snapped.distanceMeters.toFixed(1)} m clear of hazards.`
         : "Checkpoint moved; adjacent route legs recalculated.");
     });
     marker.addTo(site.checkpointMarkers);
@@ -472,50 +528,94 @@ function renderCheckpointMarkers(site) {
 function renderRoute(site) {
   const route = siteLayers[site.key].route;
   route.clearLayers();
-  site.plan.legs.forEach((leg, index) => {
-    const positions = leg.path.map(([row, col]) => gridToMap(site, row, col));
-    if (positions.length < 2) return;
-    if (leg.unreachable) {
+  const choices = [...site.routeChoices].sort((left, right) => (
+    Number(left.key === site.selectedRouteKey) - Number(right.key === site.selectedRouteKey)
+  ));
+  choices.forEach((choice) => {
+    const isSelected = choice.key === site.selectedRouteKey;
+    choice.plan.legs.forEach((leg, index) => {
+      if (leg.unreachable) return;
+      const positions = leg.path.map(([row, col]) => gridToMap(site, row, col));
+      if (positions.length < 2) return;
       L.polyline(positions, {
-        color: "#ff6b6b",
-        weight: 3,
-        dashArray: "6 7",
+        color: isSelected ? "#c3adff" : "#8a8a8a",
+        weight: isSelected ? 4 : 2,
+        opacity: isSelected ? .95 : .55,
         lineCap: "round",
+        lineJoin: "round",
         bubblingMouseEvents: false,
         pane: "route-pane",
-      }).bindTooltip("No safe path found · straight line only").addTo(route);
-      return;
-    }
-    const isReturn = site.returnToHabitat && index === site.plan.legs.length - 1;
-    const color = isReturn ? "#68e1fd" : "#fbbf24";
-    L.polyline(positions, {
-      color: "#080d16",
-      weight: 7,
-      opacity: .9,
-      lineCap: "round",
-      lineJoin: "round",
-      bubblingMouseEvents: false,
-      pane: "route-pane",
-    }).addTo(route);
-    L.polyline(positions, {
-      color,
-      weight: 3,
-      opacity: 1,
-      dashArray: isReturn ? null : "10 8",
-      lineCap: "round",
-      lineJoin: "round",
-      bubblingMouseEvents: false,
-      pane: "route-pane",
-    }).bindTooltip(isReturn ? "Return to Habitat" : `Route leg ${index + 1}`).addTo(route);
+      }).bindTooltip(`${choice.name} · leg ${index + 1}`)
+        .on("click", () => selectRoute(site, choice.key))
+        .addTo(route);
+    });
   });
   const routeToggle = document.getElementById("route-toggle");
   setLayerVisible(route, selectedSite === site.key && routeToggle.checked);
+}
+
+function renderRouteCards(site) {
+  const container = document.getElementById("route-cards");
+  const fastest = site.routeChoices.find((choice) => choice.key === "fastest")?.plan;
+  container.replaceChildren(...site.routeChoices.map((choice) => {
+    const { plan } = choice;
+    const button = document.createElement("button");
+    const withinLimit = plan.timeH !== null
+      && plan.timeH <= site.routeGrid.parameters.eva_hours;
+    button.type = "button";
+    button.className = `route-card${choice.key === site.selectedRouteKey ? " is-selected" : ""}`;
+    button.dataset.routeKey = choice.key;
+    button.setAttribute("aria-pressed", String(choice.key === site.selectedRouteKey));
+    button.title = `${choice.name}: ${plan.computationMs.toFixed(1)} ms, `
+      + `${plan.exploredCells} cells explored`;
+    const name = document.createElement("span");
+    name.className = "route-card-name";
+    name.textContent = choice.name;
+    const metrics = document.createElement("span");
+    metrics.className = "route-card-metrics";
+    metrics.textContent = plan.timeH === null
+      ? "No safe route"
+      : `${plan.timeH.toFixed(2)} h · ${plan.distanceKm.toFixed(2)} km · `
+        + `${plan.doseMsv.toFixed(4)} mSv`;
+    const clearance = document.createElement("span");
+    clearance.className = "route-card-clearance";
+    const differenceMinutes = !fastest || fastest.timeH === null || plan.timeH === null
+      ? null
+      : Math.round((plan.timeH - fastest.timeH) * 60);
+    const difference = choice.key === "fastest"
+      ? "0 min"
+      : differenceMinutes === null
+      ? "time unavailable"
+      : differenceMinutes > 0
+        ? `+${differenceMinutes} min`
+        : differenceMinutes < 0 ? `${differenceMinutes} min` : "same time";
+    clearance.textContent = `Min clearance ${plan.minimumClearanceM?.toFixed(1) ?? "--"} m · ${difference}`;
+    const compute = document.createElement("span");
+    compute.className = "route-card-compute";
+    compute.textContent = `${plan.computationMs.toFixed(1)} ms · `
+      + `${plan.exploredCells.toLocaleString()} cells explored`;
+    const badge = document.createElement("span");
+    badge.className = `route-card-badge${withinLimit ? "" : " is-over"}`;
+    badge.textContent = plan.unreachable
+      ? "NO SAFE PATH"
+      : withinLimit ? "WITHIN EVA LIMIT" : "OVER EVA LIMIT";
+    button.append(name, metrics, clearance, compute, badge);
+    return button;
+  }));
+}
+
+function selectRoute(site, routeKey) {
+  if (!site.routeChoices.some((choice) => choice.key === routeKey)) return;
+  site.selectedRouteKey = routeKey;
+  if (selectedSite === site.key) updateSiteSummary(site);
+  else updateCheckpointUI(site);
 }
 
 function updateCheckpointUI(site) {
   renderCheckpointTrack(site);
   renderCheckpointDetails(site);
   renderCheckpointMarkers(site);
+  renderRouteCards(site);
   setLayerVisible(
     siteLayers[site.key].targets,
     selectedSite === site.key && document.getElementById("targets-toggle").checked,
@@ -546,11 +646,24 @@ function buildSiteLayers(siteKey, grid, routeGrid) {
     name: grid.site_name,
     grid,
     routeGrid,
+    safetyMarginCells: routeGrid.parameters.safety_margin_cells,
+    originalHabitat: { ...grid.habitat },
+    originalTargets: grid.targets.map((point) => ({ ...point })),
     checkpoints: grid.targets.map(({ row, col }) => ({ row, col })),
+    algorithm: "astar",
+    epsilon: routeGrid.parameters.weighted_astar_epsilon,
     returnToHabitat: true,
     checkpointMarkers: null,
     plan: null,
+    routeChoices: [],
+    selectedRouteKey: "fastest",
+    alternativesRequestId: 0,
   };
+  const snappedEndpoints = [grid.habitat, ...grid.targets]
+    .filter((point) => point.snapped);
+  site.endpointSnapMessage = snappedEndpoints.length
+    ? `${snappedEndpoints.length} mission point(s) snapped outside the safety margin.`
+    : "";
   site.bounds = boundsToMap(grid.geo_reference.bounds);
   const route = L.layerGroup().addTo(window.map);
   const targets = L.layerGroup().addTo(window.map);
@@ -577,21 +690,16 @@ function buildSiteLayers(siteKey, grid, routeGrid) {
     layer._desiredOpacity = defaults[name];
     setLayerVisible(layer, false);
   });
-  site.plan = RoutePlanner.planRoute(
-    routeGrid,
-    grid.habitat,
-    site.checkpoints,
-    site.returnToHabitat,
-  );
   siteData[siteKey] = site;
   siteLayers[siteKey] = output;
   renderCheckpointMarkers(site);
   setLayerVisible(output.targets, false);
-  renderRoute(site);
+  recalculateSiteRoute(site);
 }
 
 function updateSiteSummary(site) {
-  const { grid, plan } = site;
+  const { grid } = site;
+  const plan = selectedRoute(site).plan;
   const parameters = site.routeGrid.parameters;
   document.getElementById("distance").textContent = plan.distanceKm === null
     ? "NO ROUTE"
@@ -619,21 +727,60 @@ function updateSiteSummary(site) {
   safetyStatus.classList.toggle("warning", plan.unreachable || !withinLimit);
   safetyStatus.classList.toggle("caution", !plan.unreachable && tightMargin);
   document.getElementById("load-status").textContent =
-    "Live A* route uses the supplied DEM-derived cost grid. Habitat and science locations are placeholders.";
+    `Live ${site.algorithm === "weighted" ? "Weighted A*" : site.algorithm === "astar" ? "A*" : "Dijkstra"} route uses the shared hazard mask. Habitat and science locations are placeholders.`;
   document.getElementById("site-name").textContent = grid.site_name;
   document.getElementById("site-region").textContent = "Real NASA data";
   document.getElementById("site-select").value = site.key;
   document.getElementById("slope-limit").textContent =
     `${parameters.max_walkable_slope_deg}°+`;
+  document.getElementById("safety-margin").value = String(site.safetyMarginCells);
+  document.getElementById("safety-margin-value").textContent =
+    `${site.safetyMarginCells} cells`;
+  const choice = selectedRoute(site);
   document.getElementById("safety-intro").textContent = site.returnToHabitat
-    ? "Live A* estimate · return to Habitat included"
-    : "Live A* estimate · return to Habitat is off";
+    ? `${choice.name} route · return to Habitat included`
+    : `${choice.name} route · return to Habitat is off`;
   document.getElementById("route-assumptions").textContent =
     `ASSUMPTIONS · ${parameters.walking_speed_kmh} km/h · `
     + `${parameters.eva_hours} h EVA · `
     + `${parameters.dose_rate_msv_per_hour} mSv/h dose`;
+  updateAlgorithmControl(site);
   updateCheckpointUI(site);
   renderCoordinateStatus();
+}
+
+function updateSafetyMargin(site, safetyMarginCells) {
+  const hasWalkableCell = site.routeGrid.costs.some((cost, index) => (
+    Number.isFinite(cost)
+      && site.routeGrid.clearanceCells[index] > safetyMarginCells
+  ));
+  if (!hasWalkableCell) {
+    setRouteMessage("No free cells remain at that safety margin.", true);
+    return false;
+  }
+
+  const snappedMessages = [];
+  const snapPoint = (point, label) => {
+    const snapped = nearestFreeCell(site, point.row, point.col, safetyMarginCells);
+    if (!snapped) throw new Error("No free cell remains at this safety margin.");
+    if (snapped.distanceMeters > 0) {
+      snappedMessages.push(`${label} moved ${snapped.distanceMeters.toFixed(1)} m`);
+    }
+    return { ...point, row: snapped.row, col: snapped.col };
+  };
+  site.safetyMarginCells = safetyMarginCells;
+  site.grid.habitat = snapPoint(site.originalHabitat, "Habitat");
+  site.grid.targets = site.originalTargets.map((point, index) => (
+    snapPoint(point, `Target ${index + 1}`)
+  ));
+  site.checkpoints = site.checkpoints.map((point, index) => (
+    snapPoint(point, `Checkpoint ${index + 1}`)
+  ));
+  recalculateSiteRoute(site);
+  setRouteMessage(snappedMessages.length
+    ? `Safety margin ${safetyMarginCells} cells; ${snappedMessages.join(", ")} clear of hazards.`
+    : `Safety margin set to ${safetyMarginCells} cells; routes recalculated.`);
+  return true;
 }
 
 function activateSite(siteKey) {
@@ -650,6 +797,7 @@ function activateSite(siteKey) {
   });
   Object.assign(layers, siteLayers[siteKey]);
   updateSiteSummary(site);
+  setRouteMessage(site.endpointSnapMessage);
   layers.boundaries?.eachLayer((boundary) => {
     if (!boundary.setStyle) return;
     boundary.setStyle(boundary._siteKey === siteKey
@@ -675,15 +823,31 @@ function flyToSite(siteKey) {
 async function loadSiteData(siteKey) {
   const processedRoot = `/data/processed/${siteKey}/`;
   const costRoot = `data/${siteKey}/`;
-  const [grid, costMetadata, costResponse] = await Promise.all([
+  const [grid, costMetadata] = await Promise.all([
     fetchJson(`${processedRoot}grid.json`),
     fetchJson(`${costRoot}cost.json`),
-    fetch(`${costRoot}cost.bin`),
   ]);
-  if (!costResponse.ok) {
-    throw new Error(`Could not load ${siteKey} route grid: HTTP ${costResponse.status}`);
+  const costFiles = [
+    "cost.bin",
+    costMetadata.clearance_files.cells,
+    costMetadata.clearance_files.meters,
+  ];
+  const responses = await Promise.all(costFiles.map((file) => fetch(`${costRoot}${file}`)));
+  const failedResponse = responses.find((response) => !response.ok);
+  if (failedResponse) {
+    throw new Error(
+      `Could not load ${siteKey} route data: HTTP ${failedResponse.status}`,
+    );
   }
-  const routeGrid = RoutePlanner.decodeGrid(costMetadata, await costResponse.arrayBuffer());
+  const [costBuffer, clearanceCellsBuffer, clearanceMetersBuffer] = await Promise.all(
+    responses.map((response) => response.arrayBuffer()),
+  );
+  const routeGrid = RoutePlanner.decodeGrid(
+    costMetadata,
+    costBuffer,
+    clearanceCellsBuffer,
+    clearanceMetersBuffer,
+  );
   if (routeGrid.site !== siteKey || routeGrid.rows !== grid.rows || routeGrid.cols !== grid.cols) {
     throw new Error(`${siteKey} route grid does not match the site data`);
   }
@@ -818,6 +982,36 @@ async function loadPlanner() {
     const site = siteData[selectedSite];
     site.returnToHabitat = event.target.checked;
     recalculateSiteRoute(site);
+  });
+  document.getElementById("safety-margin").addEventListener("change", (event) => {
+    const site = siteData[selectedSite];
+    const safetyMarginCells = Number(event.target.value);
+    if (!Number.isInteger(safetyMarginCells) || safetyMarginCells < 0) {
+      throw new RangeError("Safety margin must be a non-negative integer");
+    }
+    if (!updateSafetyMargin(site, safetyMarginCells)) {
+      event.target.value = String(site.safetyMarginCells);
+      document.getElementById("safety-margin-value").textContent =
+        `${site.safetyMarginCells} cells`;
+    }
+  });
+  document.getElementById("route-algorithm").addEventListener("change", (event) => {
+    const site = siteData[selectedSite];
+    site.algorithm = event.target.value;
+    recalculateSiteRoute(site);
+  });
+  document.getElementById("weighted-epsilon").addEventListener("input", (event) => {
+    document.getElementById("weighted-epsilon-value").textContent =
+      Number(event.target.value).toFixed(1);
+  });
+  document.getElementById("weighted-epsilon").addEventListener("change", (event) => {
+    const site = siteData[selectedSite];
+    site.epsilon = Number(event.target.value);
+    recalculateSiteRoute(site);
+  });
+  document.getElementById("route-cards").addEventListener("click", (event) => {
+    const card = event.target.closest("[data-route-key]");
+    if (card && selectedSite) selectRoute(siteData[selectedSite], card.dataset.routeKey);
   });
   setLayerControl("terrain", "terrain-toggle", "terrain-opacity");
   setLayerControl("imagery", "imagery-toggle", "imagery-opacity");

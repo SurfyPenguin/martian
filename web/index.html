@@ -49,17 +49,22 @@
           <h2>Safety summary</h2>
           <span id="safety-status" class="safety-status">CHECKING</span>
         </div>
-        <div id="safety-intro" class="safety-intro">Live A* estimate · return to Habitat included</div>
+        <div id="safety-intro" class="safety-intro">Live route estimate · return to Habitat included</div>
         <div class="stat"><span>Route distance</span><strong id="distance">--</strong></div>
         <div class="stat"><span>Estimated EVA time</span><strong id="time">--</strong></div>
         <div class="stat"><span id="margin-label">Return margin</span><strong id="margin">--</strong></div>
         <div class="stat"><span>Estimated dose</span><strong id="dose">--</strong></div>
         <div id="route-assumptions" class="safety-intro">ASSUMPTIONS · loading</div>
+        <label class="safety-margin-control" for="safety-margin">
+          <span>Safety margin · ASSUMPTION <output id="safety-margin-value">2 cells</output></span>
+          <input id="safety-margin" type="range" min="0" max="6" step="1" value="2"
+            aria-label="Safety margin in hazard-free cells">
+        </label>
       </section>
 
       <section class="legend control-section">
         <h2>Legend</h2>
-        <div class="legend-item"><span class="swatch hazard-swatch"></span>Slope / roughness hazard</div>
+        <div class="legend-item"><span class="swatch hazard-swatch"></span>Slope, roughness or NoData hazard</div>
         <div class="legend-item"><span class="swatch imagery-swatch"></span>CTX imagery</div>
         <div class="legend-item"><span class="swatch outbound-swatch"></span> Outbound</div>
         <div class="legend-item"><span class="swatch return-swatch"></span> Return</div>
@@ -99,12 +104,27 @@
           <label class="return-toggle"><input id="return-to-habitat" type="checkbox" checked>
             Return to Habitat</label>
         </div>
+        <div class="route-options">
+          <label>Algorithm
+            <select id="route-algorithm" aria-describedby="algorithm-description">
+              <option value="astar">A* (octile)</option>
+              <option value="dijkstra">Dijkstra</option>
+              <option value="weighted">Weighted A*</option>
+            </select>
+          </label>
+          <label id="weighted-epsilon-control" hidden>
+            Weighted A* epsilon <output id="weighted-epsilon-value">1.5</output>
+            <input id="weighted-epsilon" type="range" min="1.1" max="3" step="0.1" value="1.5">
+          </label>
+          <p id="algorithm-description"></p>
+        </div>
         <div id="route-status" class="route-status" role="status" aria-live="polite"></div>
+        <div id="route-cards" class="route-cards" aria-label="Alternative routes"></div>
         <div id="checkpoint-track" class="checkpoint-track" aria-label="Clickable mission checkpoints">
         </div>
         <div id="checkpoint-details" class="checkpoint-details">
           <div id="checkpoint-leg-list"></div>
-          <span class="checkpoint-note">Stops are in-memory planning points. A* avoids impassable terrain; walk speed and dose are assumptions.</span>
+          <span class="checkpoint-note">Stops are in-memory planning points. Routes avoid hazards and the selected safety margin; walk speed and dose are assumptions.</span>
         </div>
       </section>
       <div id="map-inspector" class="map-inspector" aria-live="polite">
