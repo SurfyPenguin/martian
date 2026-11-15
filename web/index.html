@@ -17,7 +17,7 @@
         <h1 id="site-name">Mars field plan</h1>
         <div class="mission-meta"><span id="site-region">Real NASA data</span><span>3 targets</span></div>
       </header>
-      <div class="banner"><span class="status-dot"></span>Real DEM + CTX imagery · placeholder habitat and targets · dose, radiation and walking speed are assumptions</div>
+      <div class="banner"><span class="status-dot"></span>Real DEM + CTX imagery · surrounding map is real NASA data at lower resolution · placeholder habitat and targets · dose, radiation and walking speed are assumptions</div>
 
       <section class="control-section">
         <label class="site-picker" for="site-select"><span>Site</span><select id="site-select">
@@ -64,7 +64,7 @@
           <div class="slope-key-bar"></div>
           <div class="slope-key-labels"><span>0°</span><span id="slope-limit">15°+</span></div>
         </div>
-        <p>Red cells exceed the slope or roughness setting. DEM and imagery are real; habitat, targets, dose, radiation and walking speed remain placeholders or assumptions.</p>
+        <p>Red cells exceed the slope or roughness setting. DEM, imagery and the surrounding map are real NASA data; the surrounding map is lower resolution and context only. Habitat, targets, dose, radiation and walking speed remain placeholders or assumptions.</p>
         <p id="coordinate-readout" class="coordinate-readout">Move over the grid for coordinates.</p>
         <p id="load-status" class="load-status">Loading processed layers...</p>
       </section>
@@ -108,6 +108,7 @@
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="geo.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

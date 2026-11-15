@@ -72,6 +72,16 @@
   panel and checkpoint bar styling with the sidebar's layout and typography
 - Made the scale bar choose a readable distance from the current zoom instead
   of stretching across the map or staying fixed at 1 km
+- Added a decimated NASA CTX and DEM hillshade context generator; both WebP
+  overview assets are under 3 MB and their bounds come from the source rasters
+- Added a shared Mars equirectangular projection for backdrops, site overlays,
+  raster-cell centers, routes, targets, coordinate readout, and scale bar
+- Kept both sites' imagery, terrain, slope, hazard, route, and target layers
+  loaded and positioned; added named site outlines and dropdown/outline fly-to
+  switching with the safety summary and checkpoints updated after movement
+- Added the low-resolution, no-route-data context label and clarified that the
+  surrounding map is real NASA data; confirmed CTX texture continuity across
+  both site boxes and browser switching without application console errors
 
 ## In progress
 (nothing)

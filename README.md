@@ -10,8 +10,8 @@ not mission measurements.
 
 1. Create and activate a Python 3.11+ virtual environment.
 2. Install dependencies: `python -m pip install -r requirements.txt`
-3. Inspect the inputs and regenerate the schema:
-   `python scripts/inspect_data.py`
+3. Inspect inputs and generate the lower-resolution surrounding context:
+   `python scripts/inspect_data.py && python scripts/make_backdrop.py`
 4. Process both sites:
    `python scripts/slope.py --site site1 && python scripts/route.py --site site1`
    `python scripts/slope.py --site site2 && python scripts/route.py --site site2`
@@ -19,8 +19,9 @@ not mission measurements.
    and open `http://localhost:8000/web/`.
 
 The site selector loads **Gale crater floor** and **Southern box** outputs
-from `data/processed/<site>/`. Never put raw downloads in the repository or
-read from `data/raw/`.
+from `data/processed/<site>/`; the surrounding map is real NASA data at lower
+resolution for context only. Never put raw downloads in the repository or
+read from `data/raw/` outside `scripts/make_backdrop.py`.
 
 ## Optional placeholder fallback
 

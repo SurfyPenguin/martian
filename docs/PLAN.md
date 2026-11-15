@@ -8,8 +8,9 @@ Solo build. Full challenge text is in `docs/CHALLENGE.md`. Progress is tracked i
 
 Astronauts planning a Marswalk need a hyperlocal view that combines terrain,
 imagery, targets, route safety, and explicit mission assumptions. The current
-tool focuses on two supplied, clipped sites and keeps the processing path
-reproducible without reading external downloads.
+tool focuses on two supplied, clipped sites. Context data is read only by the
+decimated backdrop generator; the site pipeline uses the supplied processed
+rasters.
 
 **Goal:** Build a layered, interactive EVA planning map that combines supplied
 NASA-provided DEM and CTX inputs with derived hazard and route information.
@@ -44,8 +45,9 @@ the placeholders before operational use.
 | Route / targets | Navigation | A* output and placeholder coordinates | Yes |
 | Dose estimate | Safety planning | Labeled `scripts/config.py` assumption | Yes |
 
-The supplied files are the only real-data inputs in the current pipeline. Their
-product IDs and acquisition dates are not available in this repository.
+The supplied site rasters and lower-resolution context rasters are the real-data
+inputs in the current pipeline. Their product IDs and acquisition dates are not
+available in this repository.
 
 ## 4. Key Features
 
@@ -59,20 +61,23 @@ product IDs and acquisition dates are not available in this repository.
 ## 5. Architecture
 
 ```text
-data/raw/        external downloads (gitignored; never read by this pipeline)
+data/raw/        context rasters (gitignored; read only by make_backdrop.py)
 scripts/
   config.py      site paths, coordinates, and labeled assumptions
   inspect_data.py  input schema inspection
+  make_backdrop.py decimated context imagery/hillshade -> web/data/
   slope.py       DEM -> meter-scaled slope/roughness -> hazard and PNG layers
   route.py       A* over the cost map -> data/processed/<site>/
 data/processed/  supplied inputs and per-site rasters, PNGs, route, stats, grid
 web/
-  index.html, app.js, style.css   Leaflet app
+  index.html, app.js, geo.js, style.css   Leaflet app and shared projection
+  data/         low-resolution context images and bounds
 ```
 
-**Pipeline:** inspect supplied inputs -> compute meter-scaled slope and 5x5
-roughness -> build traversability score -> run A* per site -> export aligned
-PNG, GeoJSON, stats, and grid metadata -> Leaflet loads the selected site.
+**Pipeline:** inspect inputs -> generate decimated backdrop context -> compute
+meter-scaled slope and 5x5 roughness -> build traversability score -> run A*
+per site -> export aligned PNG, GeoJSON, stats, and grid metadata -> Leaflet
+loads both sites in the shared Mars map projection.
 
 ## 6. Assumptions
 

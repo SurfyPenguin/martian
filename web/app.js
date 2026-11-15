@@ -1,29 +1,35 @@
 const layers = {};
+const siteLayers = {};
+const siteData = {};
 const SITE_OPTIONS = {
   site1: "Gale crater floor",
   site2: "Southern box",
 };
+let selectedSite = null;
+let pendingSite = null;
+let backdropBounds = null;
 
 function formatNumber(value, unit, digits = 2) {
   return `${Number(value).toFixed(digits)} ${unit}`;
 }
 
-function makeImageOverlay(path, bounds, pane) {
-  return L.imageOverlay(`/${path}`, bounds, { pane });
-}
-
-function gridToLeaflet([row, col]) {
-  return [window.grid.rows - row, col];
+function makeImageOverlay(path, bounds, pane, options = {}) {
+  return L.imageOverlay(`/${path}`, bounds, { pane, ...options });
 }
 
 function setLayerControl(name, toggleId, opacityId) {
   const toggle = document.getElementById(toggleId);
   const opacity = document.getElementById(opacityId);
   toggle.addEventListener("change", () => {
-    if (toggle.checked) layers[name].addTo(window.map);
-    else window.map.removeLayer(layers[name]);
+    Object.values(siteLayers).forEach((site) => {
+      setLayerVisible(site[name], site === siteLayers[selectedSite] && toggle.checked);
+    });
   });
-  opacity.addEventListener("input", () => setLayerOpacity(layers[name], Number(opacity.value)));
+  opacity.addEventListener("input", () => {
+    Object.values(siteLayers).forEach((site) => {
+      setLayerOpacity(site[name], Number(opacity.value));
+    });
+  });
 }
 
 function setupSidebarResizer() {
@@ -66,39 +72,57 @@ function setupSidebarResizer() {
 }
 
 function setLayerOpacity(layer, value) {
+  if (!layer) return;
+  layer._desiredOpacity = value;
   if (layer.setOpacity) {
-    layer.setOpacity(value);
+    layer.setOpacity(layer._siteVisible ? value : 0);
   } else if (layer.setStyle) {
-    layer.setStyle({ opacity: value, fillOpacity: value });
+    layer.setStyle({
+      opacity: layer._siteVisible ? value : 0,
+      fillOpacity: layer._siteVisible ? value : 0,
+    });
   } else if (layer.eachLayer) {
     layer.eachLayer((child) => setLayerOpacity(child, value));
   }
 }
 
-function addScaleBar(map, grid) {
+function setLayerVisible(layer, visible) {
+  if (!layer) return;
+  layer._siteVisible = visible;
+  const opacity = layer._desiredOpacity ?? 1;
+  if (layer.setOpacity) {
+    layer.setOpacity(visible ? opacity : 0);
+  } else if (layer.setStyle) {
+    layer.setStyle({
+      opacity: visible ? opacity : 0,
+      fillOpacity: visible ? opacity : 0,
+    });
+  } else if (layer.eachLayer) {
+    layer.eachLayer((child) => setLayerVisible(child, visible));
+  }
+}
+
+function addScaleBar(map) {
   const control = L.control({ position: "bottomleft" });
   control.onAdd = () => {
     const element = L.DomUtil.create("div", "map-scale");
-    const scaleValuesKm = [
-      0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5,
-      1, 2, 5, 10, 20, 50, 100, 200, 500, 1000,
+    const scaleValuesM = [
+      10, 20, 50, 100, 200, 500, 1000, 2000, 5000,
+      10000, 20000, 50000, 100000, 200000,
     ];
     element.setAttribute("aria-label", "Map scale");
     const update = () => {
-      const cellSizeM = window.grid?.cell_size_m.x || grid.cell_size_m.x;
       const start = map.latLngToContainerPoint([0, 0]);
       const oneCell = map.latLngToContainerPoint([0, 1]);
-      const cellPixels = Math.abs(oneCell.x - start.x);
+      const metersPixels = Math.abs(oneCell.x - start.x);
       const targetPixels = 120;
-      const maxScaleKm = targetPixels * cellSizeM / (cellPixels * 1000);
-      const desiredKm = scaleValuesKm.reduce(
-        (value, candidate) => candidate <= maxScaleKm ? candidate : value,
-        scaleValuesKm[0],
+      const maxScaleM = targetPixels / metersPixels;
+      const desiredM = scaleValuesM.reduce(
+        (value, candidate) => candidate <= maxScaleM ? candidate : value,
+        scaleValuesM[0],
       );
-      const scalePixels = desiredKm * 1000 / cellSizeM * cellPixels;
-      const label = desiredKm < 1
-        ? `${Math.round(desiredKm * 1000)} m`
-        : `${Number.isInteger(desiredKm) ? desiredKm : desiredKm.toFixed(1)} km`;
+      const scalePixels = desiredM * metersPixels;
+      const label = desiredM < 1000 ? `${desiredM} m` : `${desiredM / 1000} km`;
       element.style.width = `${Math.max(40, Math.min(targetPixels, scalePixels))}px`;
       element.textContent = label;
     };
@@ -123,7 +147,7 @@ function createResetControl(map, bounds) {
   button.textContent = "Reset view";
   button.title = "Fit the full mission area";
   L.DomEvent.on(button, "click", () => {
-    map.fitBounds(window.siteBounds || bounds, { padding: [24, 24] });
+    map.fitBounds(bounds, { padding: [24, 24] });
   });
   return button;
 }
@@ -199,27 +223,7 @@ function addNavigationDock(map, bounds, minZoom) {
   control.addTo(map);
 }
 
-function gridToLatLon(grid, [row, col]) {
-  const bounds = grid.geo_reference.bounds;
-  const latRatio = (grid.rows - row) / grid.rows;
-  const lonRatio = col / grid.cols;
-  return {
-    lat: bounds.min_lat + latRatio * (bounds.max_lat - bounds.min_lat),
-    lon: bounds.min_lon + lonRatio * (bounds.max_lon - bounds.min_lon),
-  };
-}
-
-function inspectCell(grid, latlng) {
-  const row = Math.max(0, Math.min(grid.rows - 1, Math.floor(grid.rows - latlng.lat)));
-  const col = Math.max(0, Math.min(grid.cols - 1, Math.floor(latlng.lng)));
-  return {
-    row,
-    col,
-    latLon: gridToLatLon(grid, [row, col]),
-  };
-}
-
-function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm } = {}) {
+function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm, gridLabel } = {}) {
   const status = document.getElementById("map-inspector");
   if (!latitude) {
     status.innerHTML =
@@ -232,7 +236,7 @@ function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm } = {})
   status.innerHTML =
     '<span class="statusbar-label">COORDINATES</span>'
     + `<strong class="statusbar-coordinate">LAT ${latitude}° · LON ${longitude}°</strong>`
-    + `<span class="statusbar-grid">GRID ${row}, ${col}</span>`
+    + `<span class="statusbar-grid">${gridLabel || `GRID ${row}, ${col}`}</span>`
     + `<span class="statusbar-distance">FROM HABITAT ${rangeKm.toFixed(2)} KM</span>`;
 }
 
@@ -261,67 +265,46 @@ function renderCheckpointDetails(grid, stats) {
 }
 
 function jumpToCheckpoint(checkpointId) {
-  if (!window.grid) return;
+  if (!selectedSite) return;
+  const site = siteData[selectedSite];
   const point = checkpointId === "habitat" || checkpointId === "return"
-    ? window.grid.habitat
-    : window.grid.targets.find((target) => target.id === checkpointId);
+    ? site.grid.habitat
+    : site.grid.targets.find((target) => target.id === checkpointId);
   if (!point) return;
-  const zoom = Math.min(window.map.getMaxZoom(), window.mapMinZoom + 3);
-  window.map.flyTo(gridToLeaflet([point.row, point.col]), zoom, { duration: 0.45 });
+  const zoom = Math.min(window.map.getMaxZoom(), window.siteMinZoom + 3);
+  window.map.flyTo(gridToMap(site, point.row, point.col), zoom, { duration: 0.45 });
   document.querySelectorAll(".checkpoint").forEach((checkpoint) => {
     checkpoint.classList.toggle("is-selected", checkpoint.dataset.checkpoint === checkpointId);
   });
 }
 
-async function loadSite(site) {
-  const root = `/data/processed/${site}/`;
-  const [stats, grid] = await Promise.all([
-    fetch(`${root}stats.json`).then((response) => response.json()),
-    fetch(`${root}grid.json`).then((response) => response.json()),
-  ]);
-  Object.values(layers).forEach((layer) => window.map.removeLayer(layer));
-  window.grid = grid;
-  const bounds = grid.grid_bounds;
-  const minZoom = window.map.getBoundsZoom(bounds);
-  window.siteBounds = bounds;
-  window.mapMinZoom = minZoom;
-  window.map.setMinZoom(minZoom);
-  window.map.fitBounds(bounds, { padding: [24, 24] });
-  document.getElementById("site-name").textContent = grid.site_name;
-  document.getElementById("site-region").textContent = "Real NASA data";
-  document.getElementById("site-select").value = site;
-  document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
-  renderCheckpointDetails(grid, stats);
-  renderCoordinateStatus();
-
-  layers.terrain = makeImageOverlay(grid.layer_paths.elevation, bounds, "terrain-pane").addTo(window.map);
-  layers.imagery = makeImageOverlay(grid.layer_paths.imagery, bounds, "imagery-pane").addTo(window.map);
-  layers.slope = makeImageOverlay(grid.layer_paths.slope, bounds, "slope-pane").addTo(window.map);
-  layers.hazard = makeImageOverlay(grid.layer_paths.hazard, bounds, "hazard-pane").addTo(window.map);
+function buildSiteLayers(siteKey, stats, grid) {
+  const site = { key: siteKey, name: grid.site_name, stats, grid };
+  site.bounds = boundsToMap(grid.geo_reference.bounds);
   const outboundPixels = grid.route_segments.slice(0, -1).flatMap((segment, index) =>
     index === 0 ? segment : segment.slice(1));
   const returnPixels = grid.route_segments.at(-1);
-  layers.route = L.layerGroup([
-    L.polyline(outboundPixels.map(gridToLeaflet), {
+  const route = L.layerGroup([
+    L.polyline(outboundPixels.map(([row, col]) => gridToMap(site, row, col)), {
       color: "#080d16", weight: 7, opacity: .9, lineCap: "round", lineJoin: "round",
       pane: "route-pane",
     }),
-    L.polyline(outboundPixels.map(gridToLeaflet), {
+    L.polyline(outboundPixels.map(([row, col]) => gridToMap(site, row, col)), {
       color: "#fbbf24", weight: 3, opacity: 1, dashArray: "10 8",
       lineCap: "round", lineJoin: "round", pane: "route-pane",
     }).bindTooltip("Outbound leg · Habitat → science targets"),
-    L.polyline(returnPixels.map(gridToLeaflet), {
+    L.polyline(returnPixels.map(([row, col]) => gridToMap(site, row, col)), {
       color: "#080d16", weight: 8, opacity: .9, lineCap: "round", lineJoin: "round",
       pane: "route-pane",
     }),
-    L.polyline(returnPixels.map(gridToLeaflet), {
+    L.polyline(returnPixels.map(([row, col]) => gridToMap(site, row, col)), {
       color: "#68e1fd", weight: 4, opacity: 1,
       lineCap: "round", lineJoin: "round", pane: "route-pane",
     }).bindTooltip("Return leg · Target 3 → Habitat"),
   ]).addTo(window.map);
-  layers.targets = L.layerGroup();
+  const targets = L.layerGroup();
   grid.targets.forEach((target) => {
-    const marker = L.circleMarker(gridToLeaflet([target.row, target.col]), {
+    const marker = L.circleMarker(gridToMap(site, target.row, target.col), {
       radius: 9, color: "#080d16", weight: 3, fillColor: "#fbbf24", fillOpacity: 1,
       pane: "targets-pane",
     });
@@ -329,15 +312,35 @@ async function loadSite(site) {
     const leg = grid.legs.find((item) => item.name === target.id);
     marker.bindTooltip(`${label} · ${leg.distance_km.toFixed(3)} km · ${leg.time_h.toFixed(3)} h`);
     marker.bindPopup(`<strong>${label}</strong><div class="photo-slot">CTX imagery<br>real surface preview</div>`);
-    marker.addTo(layers.targets);
+    marker.addTo(targets);
   });
-  L.circleMarker(gridToLeaflet([grid.habitat.row, grid.habitat.col]), {
+  L.circleMarker(gridToMap(site, grid.habitat.row, grid.habitat.col), {
     radius: 8, color: "#080d16", weight: 3, fillColor: "#68e1fd", fillOpacity: 1,
     pane: "targets-pane",
   }).bindTooltip(`Habitat · return ${grid.legs.at(-1).distance_km.toFixed(3)} km · ${grid.legs.at(-1).time_h.toFixed(3)} h`)
-    .bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(layers.targets);
-  layers.targets.addTo(window.map);
+    .bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(targets);
 
+  const output = {
+    terrain: makeImageOverlay(grid.layer_paths.elevation, site.bounds, "terrain-pane").addTo(window.map),
+    imagery: makeImageOverlay(grid.layer_paths.imagery, site.bounds, "imagery-pane").addTo(window.map),
+    slope: makeImageOverlay(grid.layer_paths.slope, site.bounds, "slope-pane").addTo(window.map),
+    hazard: makeImageOverlay(grid.layer_paths.hazard, site.bounds, "hazard-pane").addTo(window.map),
+    route,
+    targets,
+  };
+  const defaults = {
+    terrain: .9, imagery: .65, slope: .35, hazard: .7, route: 1, targets: 1,
+  };
+  Object.entries(output).forEach(([name, layer]) => {
+    layer._desiredOpacity = defaults[name];
+    setLayerVisible(layer, false);
+  });
+  siteData[siteKey] = site;
+  siteLayers[siteKey] = output;
+}
+
+function updateSiteSummary(site) {
+  const { grid, stats } = site;
   document.getElementById("distance").textContent = formatNumber(stats.distance_km, "km", 3);
   document.getElementById("time").textContent = formatNumber(stats.time_h, "h", 3);
   document.getElementById("margin").textContent = formatNumber(stats.return_margin_h, "h", 3);
@@ -351,20 +354,137 @@ async function loadSite(site) {
   safetyStatus.classList.toggle("warning", !withinLimit);
   safetyStatus.classList.toggle("caution", tightMargin);
   document.getElementById("load-status").textContent =
-    "Real DEM and CTX imagery loaded. Habitat and target coordinates are placeholders.";
+    "Real DEM, CTX imagery and lower-resolution surrounding NASA context loaded. Habitat and target coordinates are placeholders.";
+  document.getElementById("site-name").textContent = grid.site_name;
+  document.getElementById("site-region").textContent = "Real NASA data";
+  document.getElementById("site-select").value = site.key;
+  document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
+  renderCheckpointDetails(grid, stats);
+  renderCoordinateStatus();
+}
+
+function activateSite(siteKey) {
+  selectedSite = siteKey;
+  const site = siteData[siteKey];
+  window.siteMinZoom = window.map.getBoundsZoom(site.bounds);
+  window.siteBounds = site.bounds;
+  Object.keys(siteLayers).forEach((key) => {
+    const active = key === siteKey;
+    Object.entries(siteLayers[key]).forEach(([name, layer]) => {
+      const toggle = document.getElementById(`${name}-toggle`);
+      setLayerVisible(layer, active && toggle.checked);
+    });
+  });
+  Object.assign(layers, siteLayers[siteKey]);
+  updateSiteSummary(site);
+  layers.boundaries?.eachLayer((boundary) => {
+    if (!boundary.setStyle) return;
+    boundary.setStyle(boundary._siteKey === siteKey
+      ? { color: "#68e1fd", weight: 2, opacity: 1 }
+      : { color: "#9c8bd0", weight: 1, opacity: .7 });
+  });
+}
+
+function flyToSite(siteKey) {
+  if (!siteData[siteKey]) return;
+  pendingSite = siteKey;
+  document.getElementById("site-select").value = siteKey;
+  const finish = () => {
+    if (pendingSite !== siteKey) return;
+    pendingSite = null;
+    window.map.off("moveend", finish);
+    activateSite(siteKey);
+  };
+  window.map.once("moveend", finish);
+  window.map.flyToBounds(siteData[siteKey].bounds, { duration: 1.2, padding: [24, 24] });
+}
+
+async function loadSiteData(siteKey) {
+  const root = `/data/processed/${siteKey}/`;
+  const [stats, grid] = await Promise.all([
+    fetch(`${root}stats.json`).then((response) => response.json()),
+    fetch(`${root}grid.json`).then((response) => response.json()),
+  ]);
+  buildSiteLayers(siteKey, stats, grid);
+}
+
+function addSiteBoundaries() {
+  const boundaries = L.layerGroup();
+  Object.keys(SITE_OPTIONS).forEach((siteKey) => {
+    const site = siteData[siteKey];
+    const boundary = L.rectangle(site.bounds, {
+      color: "#9c8bd0",
+      weight: 1,
+      opacity: .7,
+      fill: false,
+      pane: "boundaries-pane",
+      className: "site-boundary",
+    });
+    boundary._siteKey = siteKey;
+    boundary.on("click", () => flyToSite(siteKey));
+    boundary.addTo(boundaries);
+    L.marker([site.bounds[1][0], site.bounds[0][1]], {
+      icon: L.divIcon({ className: "site-boundary-label-anchor", iconSize: [0, 0] }),
+      interactive: false,
+      pane: "boundaries-pane",
+    }).bindTooltip(site.name, {
+      permanent: true,
+      direction: "right",
+      offset: [4, 2],
+      className: "site-boundary-label",
+    }).addTo(boundaries);
+  });
+  boundaries.addTo(window.map);
+  layers.boundaries = boundaries;
+}
+
+function addBackdrop(backdrop) {
+  const imagery = backdrop.layers.imagery;
+  const hillshade = backdrop.layers.hillshade;
+  const imageryBounds = boundsToMap(imagery.bounds);
+  const hillshadeBounds = boundsToMap(hillshade.bounds);
+  const imageryLayer = makeImageOverlay(imagery.path, imageryBounds, "backdrop-imagery-pane", {
+    opacity: .7,
+  }).addTo(window.map);
+  const hillshadeLayer = makeImageOverlay(hillshade.path, hillshadeBounds, "backdrop-hillshade-pane", {
+    opacity: .7,
+  }).addTo(window.map);
+  backdropBounds = mapBoundsUnion([imageryBounds, hillshadeBounds]);
+  layers.backdrop = L.layerGroup([imageryLayer, hillshadeLayer]);
+  const spanY = backdropBounds[1][0] - backdropBounds[0][0];
+  const spanX = backdropBounds[1][1] - backdropBounds[0][1];
+  const labelPoint = [
+    backdropBounds[1][0] - spanY * .1,
+    backdropBounds[0][1] + spanX * .36,
+  ];
+  L.marker(labelPoint, {
+    icon: L.divIcon({
+      className: "backdrop-context-label",
+      html: "Surrounding area: low resolution,<br>context only, no route data · real NASA data",
+    }),
+    interactive: false,
+    pane: "boundaries-pane",
+  }).addTo(window.map);
 }
 
 async function loadPlanner() {
+  const backdrop = await fetch("data/backdrop.json").then((response) => response.json());
+  setGeoReference(backdrop);
   window.map = L.map("map", {
     crs: L.CRS.Simple,
+    minZoom: -12,
+    maxZoom: 18,
     zoomControl: false,
     attributionControl: false,
   });
   const paneOrder = {
+    "backdrop-imagery": 100,
+    "backdrop-hillshade": 110,
     imagery: 205,
     terrain: 210,
     slope: 220,
     hazard: 230,
+    boundaries: 440,
     route: 450,
     targets: 460,
   };
@@ -372,11 +492,15 @@ async function loadPlanner() {
     const pane = window.map.createPane(`${name}-pane`);
     pane.style.zIndex = zIndex;
   });
+  addBackdrop(backdrop);
+  const paddedBackdropBounds = padMapBounds(backdropBounds);
+  const backdropMinZoom = window.map.getBoundsZoom(backdropBounds);
+  window.map.setMaxBounds(paddedBackdropBounds);
+  window.map.setMinZoom(backdropMinZoom);
+  window.mapMinZoom = backdropMinZoom;
+
   const siteSelect = document.getElementById("site-select");
-  siteSelect.addEventListener("change", () => loadSite(siteSelect.value).catch((error) => {
-    console.error(error);
-    document.getElementById("load-status").textContent = "Could not load this site's processed layers.";
-  }));
+  siteSelect.addEventListener("change", () => flyToSite(siteSelect.value));
   setLayerControl("terrain", "terrain-toggle", "terrain-opacity");
   setLayerControl("imagery", "imagery-toggle", "imagery-opacity");
   setLayerControl("slope", "slope-toggle", "slope-opacity");
@@ -396,15 +520,18 @@ async function loadPlanner() {
     if (checkpoint) jumpToCheckpoint(checkpoint.dataset.checkpoint);
   });
   window.map.on("mousemove", (event) => {
-    if (!window.grid) return;
-    const grid = window.grid;
-    const cell = inspectCell(grid, event.latlng);
-    const eastKm = (cell.col - grid.habitat.col) * grid.cell_size_m.x / 1000;
-    const northKm = (event.latlng.lat - gridToLeaflet([grid.habitat.row, 0])[0])
-      * grid.cell_size_m.y / 1000;
-    const rangeKm = Math.hypot(eastKm, northKm);
-    const latitude = cell.latLon.lat.toFixed(5);
-    const longitude = cell.latLon.lon.toFixed(5);
+    if (!selectedSite) return;
+    const site = siteData[selectedSite];
+    const mapPosition = event.latlng;
+    const location = mapToLatLon(mapPosition[0], mapPosition[1]);
+    const cell = mapToGrid(site, mapPosition[0], mapPosition[1]);
+    const habitat = gridToMap(site, site.grid.habitat.row, site.grid.habitat.col);
+    const rangeKm = Math.hypot(
+      mapPosition[0] - habitat[0],
+      mapPosition[1] - habitat[1],
+    ) / 1000;
+    const latitude = location.lat.toFixed(5);
+    const longitude = location.lon.toFixed(5);
     document.getElementById("coordinate-readout").textContent =
       `Lat ${latitude} · Lon ${longitude}`;
     renderCoordinateStatus({
@@ -413,11 +540,15 @@ async function loadPlanner() {
       row: cell.row,
       col: cell.col,
       rangeKm,
+      gridLabel: cell.inside ? `GRID ${cell.row}, ${cell.col}` : "SURROUNDING AREA",
     });
   });
-  await loadSite(siteSelect.value);
-  addScaleBar(window.map, window.grid);
-  addNavigationDock(window.map, window.siteBounds, window.mapMinZoom);
+  await Promise.all(Object.keys(SITE_OPTIONS).map((site) => loadSiteData(site)));
+  addSiteBoundaries();
+  activateSite(siteSelect.value);
+  window.map.fitBounds(backdropBounds, { padding: [24, 24] });
+  addScaleBar(window.map);
+  addNavigationDock(window.map, backdropBounds, backdropMinZoom);
 }
 
 setupSidebarResizer();
