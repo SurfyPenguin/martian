@@ -59,4 +59,49 @@ console errors.
 
 ## Remaining sites
 
-`site_04`, `site_07`, and `sl3` have not yet been processed or verified.
+## site_04: unmatched supplied raster
+
+The GeoJSON has no matching site_04 region, so the planning window is centered
+on the supplied raster midpoint and is not given a named-region identity.
+
+| Measurement | Result |
+|---|---:|
+| Routing cell size | 10 m |
+| Elevation min / max / standard deviation | -831.536 / 1738.573 / 779.070 m |
+| DEM NoData cells | 0 |
+| Supplied-vs-derived slope mean absolute difference | 0.5366 degrees |
+| Source 5 m pixels with recorded LOLA returns | 8.1837% |
+| Hazard fraction | 86.20% |
+| Largest passable component | 7.27% |
+| Chokepoints at configured margin | 1 |
+| Automatic placeholder round trip | 8.748 km / 2.916 h |
+| Automatic return margin | 1.084 h |
+
+This site is highly hazardous under the unchanged configured thresholds.
+Its small largest passable component is reported as measured; the thresholds
+were not relaxed. The four automatic route legs and 20 random checkpoint sets
+per verifier had zero hazard cells. Minimum automatic-route clearance was
+22.4 m. Straight target-to-target lines cross hazards, while the auto route
+stays clear.
+
+| Edge case | Python result | JavaScript result |
+|---|---|---|
+| Checkpoint on hazard | Snapped 98.5 m to free cell (9, 4) | Snapped 98.5 m to free cell (9, 4) |
+| Checkpoint inside safety margin | Snapped 70.7 m to free cell (7, 7) | Snapped 70.7 m to free cell (7, 7) |
+| Disconnected pocket | No walkable route | Leg marked unreachable (`NO SAFE PATH`) |
+| Over-limit round trip | 17.156 km / 5.719 h, over the four-hour assumption | 17.156 km / 5.719 h, over the four-hour assumption |
+
+Each implementation compared A* and Dijkstra on 20 random pairs. All costs
+matched exactly at the printed precision; maximum relative difference was
+0.000%. Timing and explored-cell counts are means.
+
+| Implementation | A* ms | Dijkstra ms | A* explored | Dijkstra explored |
+|---|---:|---:|---:|---:|
+| Python | 69.69 | 75.33 | 5,496 | 7,805 |
+| JavaScript | 6.17 | 7.18 | 6,947 | 10,532 |
+
+Processing peaked at 259,280 KB RSS. The Python verifier peaked at
+149,872 KB; the JavaScript verifier peaked at 115,708 KB. All site output
+files are below 1 MB.
+
+`site_07` and `sl3` have not yet been processed or verified.

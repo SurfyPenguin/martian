@@ -1,0 +1,54 @@
+{
+  "format_version": 2,
+  "body": "moon",
+  "site": "site_04",
+  "data_status": "REAL - derived from supplied NASA DEM products",
+  "rows": 500,
+  "cols": 500,
+  "cell_size_m": {
+    "x": 10,
+    "y": 10
+  },
+  "raster_transform": [
+    10.0,
+    0.0,
+    -3500.0,
+    0.0,
+    -10.0,
+    -4500.0
+  ],
+  "crs_wkt": "PROJCS[\"unnamed\",GEOGCS[\"unnamed ellipse\",DATUM[\"unknown\",SPHEROID[\"unnamed\",1737400,0]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-90],PARAMETER[\"central_meridian\",0],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1],AXIS[\"Easting\",NORTH],AXIS[\"Northing\",NORTH]]",
+  "bounds": {
+    "min_x": -3500,
+    "min_y": -9500,
+    "max_x": 1500,
+    "max_y": -4500
+  },
+  "cost_file": "cost.bin",
+  "clearance_files": {
+    "cells": "clearance_cells.bin",
+    "meters": "clearance_meters.bin"
+  },
+  "parameters": {
+    "safety_margin_cells": 2,
+    "clearance_cost_radius_cells": 6.0,
+    "clearance_cost_weight": 0.5,
+    "max_walkable_slope_deg": 15.0,
+    "max_roughness_m": 15.0,
+    "walking_speed_kmh": 3.0,
+    "eva_hours": 4.0,
+    "dose_rate_msv_per_hour": null,
+    "dose_status": "not computed: no lunar radiation source integrated",
+    "weighted_astar_epsilon": 1.5,
+    "safer_clearance_cost_weight": 2.5,
+    "alternate_route_cost_multiplier": 3.0,
+    "alternate_route_corridor_cells": 15,
+    "alternate_route_min_leg_cells": 40,
+    "alternate_route_max_overlap": 0.6,
+    "alternate_route_max_time_factor": 1.4
+  },
+  "dtype": "float32",
+  "byte_order": "little-endian",
+  "layout": "row-major",
+  "hazard_cost": "positive-infinity"
+}

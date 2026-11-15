@@ -83,6 +83,86 @@
         "source_resolution_m": 5,
         "routing_resolution_m": 10
       }
+    },
+    {
+      "key": "site_04",
+      "name": "site_04 raster (unmatched named region)",
+      "descriptor": "86% hazard, 8.2% of source 5 m pixels have LOLA returns",
+      "region_id": null,
+      "bounds": {
+        "min_x": -3500,
+        "min_y": -9500,
+        "max_x": 1500,
+        "max_y": -4500
+      },
+      "grid": "data/processed/moon/site_04/grid.json",
+      "cost": "data/moon/site_04/cost.json",
+      "assets": {
+        "hillshade": "data/processed/moon/site_04/hillshade.png",
+        "slope": "data/processed/moon/site_04/slope.png",
+        "hazard": "data/processed/moon/site_04/hazard.png",
+        "support": "data/processed/moon/site_04/support.png",
+        "elevation": "data/processed/moon/site_04/elevation.png"
+      },
+      "metrics": {
+        "data_status": "REAL - NASA lunar raster products; placeholders are labeled",
+        "site": "site_04",
+        "site_name": "site_04 raster (unmatched named region)",
+        "center_xy_m": {
+          "x": -1000.0,
+          "y": -7000.0
+        },
+        "bounds_xy_m": {
+          "min_x": -3500,
+          "min_y": -9500,
+          "max_x": 1500,
+          "max_y": -4500
+        },
+        "source_raster_bounds_xy_m": {
+          "min_x": -9000.0,
+          "min_y": -15000.0,
+          "max_x": 7000.0,
+          "max_y": 1000.0
+        },
+        "cell_size_m": {
+          "x": 10,
+          "y": 10
+        },
+        "elevation_min": -831.5361938476562,
+        "elevation_max": 1738.57275390625,
+        "elevation_std": 779.0696411132812,
+        "nodata_cells": 0,
+        "slope_source_mean_absolute_difference_degrees": 0.5365716218948364,
+        "slope_comparison_cells": 250000,
+        "lola_return_pixel_fraction": 0.081837,
+        "hazard_cells": 215497,
+        "hazard_fraction": 0.861988,
+        "largest_passable_component_fraction": 0.072652,
+        "chokepoints": 1,
+        "safety_margin_cells": 2,
+        "route_distance_km": 8.748010819142765,
+        "route_time_h": 2.916003606380922,
+        "return_margin_h": 1.0839963936190782,
+        "within_eva_limit": true,
+        "dose_status": "not computed: no lunar radiation source integrated",
+        "thresholds": {
+          "max_walkable_slope_deg": 15.0,
+          "max_roughness_m": 15.0
+        },
+        "assumptions": [
+          "walking speed",
+          "EVA hours",
+          "slope limit",
+          "roughness limit",
+          "habitat and targets"
+        ]
+      },
+      "source_products": {
+        "surface": "site_04_final_adj_5mpp_surf.tif",
+        "slope": "site_04_final_adj_5mpp_slp.tif",
+        "source_resolution_m": 5,
+        "routing_resolution_m": 10
+      }
     }
   ],
   "projection_checks": [
