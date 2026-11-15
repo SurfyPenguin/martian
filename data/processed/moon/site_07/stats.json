@@ -1,0 +1,53 @@
+{
+  "data_status": "REAL - NASA lunar raster products; placeholders are labeled",
+  "site": "site_07",
+  "site_name": "Peak Near Shakleton",
+  "center_xy_m": {
+    "x": 30000.000017904353,
+    "y": -20000.000016004327
+  },
+  "bounds_xy_m": {
+    "min_x": 27500,
+    "min_y": -22510,
+    "max_x": 32500,
+    "max_y": -17510
+  },
+  "source_raster_bounds_xy_m": {
+    "min_x": 22000.0,
+    "min_y": -28000.0,
+    "max_x": 38000.0,
+    "max_y": -12000.0
+  },
+  "cell_size_m": {
+    "x": 10,
+    "y": 10
+  },
+  "elevation_min": 739.8484497070312,
+  "elevation_max": 1648.5772705078125,
+  "elevation_std": 172.85479736328125,
+  "nodata_cells": 0,
+  "slope_source_mean_absolute_difference_degrees": 0.357057124376297,
+  "slope_comparison_cells": 250000,
+  "lola_return_pixel_fraction": 0.065342,
+  "hazard_cells": 63896,
+  "hazard_fraction": 0.255584,
+  "largest_passable_component_fraction": 0.630184,
+  "chokepoints": 0,
+  "safety_margin_cells": 2,
+  "route_distance_km": 7.436295090390225,
+  "route_time_h": 2.478765030130075,
+  "return_margin_h": 1.521234969869925,
+  "within_eva_limit": true,
+  "dose_status": "not computed: no lunar radiation source integrated",
+  "thresholds": {
+    "max_walkable_slope_deg": 15.0,
+    "max_roughness_m": 15.0
+  },
+  "assumptions": [
+    "walking speed",
+    "EVA hours",
+    "slope limit",
+    "roughness limit",
+    "habitat and targets"
+  ]
+}

@@ -104,4 +104,46 @@ Processing peaked at 259,280 KB RSS. The Python verifier peaked at
 149,872 KB; the JavaScript verifier peaked at 115,708 KB. All site output
 files are below 1 MB.
 
-`site_07` and `sl3` have not yet been processed or verified.
+## site_07: Peak Near Shakleton
+
+The name is preserved exactly as supplied in the GeoJSON.
+
+| Measurement | Result |
+|---|---:|
+| Routing cell size | 10 m |
+| Elevation min / max / standard deviation | 739.848 / 1648.577 / 172.855 m |
+| DEM NoData cells | 0 |
+| Supplied-vs-derived slope mean absolute difference | 0.3571 degrees |
+| Source 5 m pixels with recorded LOLA returns | 6.5342% |
+| Hazard fraction | 25.56% |
+| Largest passable component | 63.02% |
+| Chokepoints at configured margin | 0 |
+| Automatic placeholder round trip | 7.436 km / 2.479 h |
+| Automatic return margin | 1.521 h |
+
+Both verifiers confirmed that straight target-to-target lines cross hazards.
+All four automatic route legs and 20 random checkpoint sets per verifier had
+zero hazard cells. Minimum automatic-route clearance ranged from 22.4 m to
+56.6 m.
+
+| Edge case | Python result | JavaScript result |
+|---|---|---|
+| Checkpoint on hazard | Snapped 56.6 m to free cell (4, 4) | Snapped 56.6 m to free cell (4, 4) |
+| Checkpoint inside safety margin | Snapped 28.3 m to free cell (4, 4) | Snapped 28.3 m to free cell (4, 4) |
+| Disconnected pocket | No walkable route | Leg marked unreachable (`NO SAFE PATH`) |
+| Over-limit round trip | 14.763 km / 4.921 h, over the four-hour assumption | 14.763 km / 4.921 h, over the four-hour assumption |
+
+Each implementation compared A* and Dijkstra on 20 random pairs. All costs
+matched exactly at the printed precision; maximum relative difference was
+0.000%. Timing and explored-cell counts are means.
+
+| Implementation | A* ms | Dijkstra ms | A* explored | Dijkstra explored |
+|---|---:|---:|---:|---:|
+| Python | 580.91 | 1125.81 | 39,380 | 85,414 |
+| JavaScript | 26.44 | 53.34 | 33,428 | 83,329 |
+
+Processing peaked at 260,996 KB RSS. The Python verifier peaked at
+173,112 KB; the JavaScript verifier peaked at 146,204 KB. All site output
+files are below 1 MB.
+
+`sl3` has not yet been processed or verified.

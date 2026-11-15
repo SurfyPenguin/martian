@@ -153,14 +153,15 @@
 - Moon mode: source data audit is complete and `site_01` is processed with
   working body switching, lunar projection, layers, and route verification.
   The unmatched `site_04` raster is also processed and verified. `site_07`,
-  `sl3`, full lunar stress tests, and final documentation remain.
+  with its source GeoJSON name preserved, is processed and verified. `sl3`,
+  full lunar stress tests, and final documentation remain.
 
 ## Blocked on me
 - Habitat and target coordinates are placeholders pending mission-provided points
 - Radiation and weather sources are not integrated yet
 
 ## Next
-1. Process and test the remaining two lunar raster sites without changing
+1. Process and test the remaining lunar raster site without changing
    configured thresholds
 2. Verify all Moon sites and repeat a browser route check on each Mars site
 3. Replace placeholder habitat and target coordinates only when verified
