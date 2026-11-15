@@ -8,6 +8,7 @@ const SITE_OPTIONS = {
 let selectedSite = null;
 let pendingSite = null;
 let backdropBounds = null;
+let routeMode = false;
 
 function formatNumber(value, unit, digits = 2) {
   return `${Number(value).toFixed(digits)} ${unit}`;
@@ -69,6 +70,23 @@ function setupSidebarResizer() {
       event.preventDefault();
     }
   });
+}
+
+function setupSidebarToggle(map) {
+  const shell = document.querySelector(".shell");
+  const toggle = document.getElementById("sidebar-toggle");
+  const reopen = document.getElementById("sidebar-reopen");
+  const setCollapsed = (collapsed) => {
+    shell.classList.toggle("is-sidebar-collapsed", collapsed);
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute("aria-label", collapsed
+      ? "Mission panel hidden"
+      : "Hide mission panel to view the map");
+    reopen.hidden = !collapsed;
+    requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+  };
+  toggle.addEventListener("click", () => setCollapsed(true));
+  reopen.addEventListener("click", () => setCollapsed(false));
 }
 
 function setLayerOpacity(layer, value) {
@@ -240,28 +258,272 @@ function renderCoordinateStatus({ latitude, longitude, row, col, rangeKm, gridLa
     + `<span class="statusbar-distance">FROM HABITAT ${rangeKm.toFixed(2)} KM</span>`;
 }
 
-function renderCheckpointDetails(grid, stats) {
-  const points = [
-    { label: "Habitat", point: grid.habitat, leg: null },
-    ...grid.targets.map((target, index) => ({
-      label: `Target ${index + 1}`,
-      point: target,
-      leg: grid.legs[index],
+function routeCellCost(site, row, col) {
+  return site.routeGrid.costs[row * site.routeGrid.cols + col];
+}
+
+function nearestWalkableCell(site, row, col) {
+  if (routeCellCost(site, row, col) >= 0) return { row, col, distanceCells: 0 };
+  let nearest = null;
+  for (let rowOffset = -5; rowOffset <= 5; rowOffset += 1) {
+    for (let colOffset = -5; colOffset <= 5; colOffset += 1) {
+      if (rowOffset * rowOffset + colOffset * colOffset > 25) continue;
+      const nextRow = row + rowOffset;
+      const nextCol = col + colOffset;
+      if (nextRow < 0 || nextRow >= site.routeGrid.rows
+        || nextCol < 0 || nextCol >= site.routeGrid.cols
+        || routeCellCost(site, nextRow, nextCol) < 0) continue;
+      const distanceSquared = (rowOffset * site.routeGrid.cellSizeM.y) ** 2
+        + (colOffset * site.routeGrid.cellSizeM.x) ** 2;
+      if (!nearest || distanceSquared < nearest.distanceSquared) {
+        nearest = {
+          row: nextRow,
+          col: nextCol,
+          distanceCells: Math.hypot(rowOffset, colOffset),
+          distanceSquared,
+        };
+      }
+    }
+  }
+  return nearest;
+}
+
+function setRouteMessage(message, isError = false) {
+  const status = document.getElementById("route-status");
+  status.textContent = message;
+  status.classList.toggle("is-error", isError);
+}
+
+function setRouteMode(enabled) {
+  routeMode = enabled;
+  const button = document.getElementById("add-checkpoint");
+  button.textContent = enabled ? "Click map" : "Add checkpoint";
+  button.setAttribute("aria-pressed", String(enabled));
+  document.getElementById("map").classList.toggle("is-route-mode", enabled);
+  setRouteMessage(enabled
+    ? "Choose a point inside the active site."
+    : "");
+}
+
+function recalculateSiteRoute(site, changedCheckpointIndex = null) {
+  site.plan = RoutePlanner.planRoute(
+    site.routeGrid,
+    site.grid.habitat,
+    site.checkpoints,
+    site.returnToHabitat,
+    changedCheckpointIndex === null ? null : site.plan,
+    changedCheckpointIndex,
+  );
+  if (selectedSite === site.key) updateSiteSummary(site);
+  else updateCheckpointUI(site);
+}
+
+function removeCheckpoint(site, index) {
+  if (index < 0 || index >= site.checkpoints.length) return;
+  window.map.closePopup();
+  site.checkpoints.splice(index, 1);
+  recalculateSiteRoute(site);
+  setRouteMessage(`Checkpoint ${index + 1} deleted; remaining legs recalculated.`);
+}
+
+function addCheckpointAt(latlng) {
+  if (!routeMode || !selectedSite) return;
+  const site = siteData[selectedSite];
+  const cell = mapToGrid(site, latlng.lat, latlng.lng);
+  if (!cell.inside) {
+    setRouteMessage("Outside planning area, no route data.", true);
+    return;
+  }
+  const snapped = nearestWalkableCell(site, cell.row, cell.col);
+  if (!snapped) {
+    setRouteMessage("No walkable cell within 5 cells; checkpoint not added.", true);
+    return;
+  }
+  site.checkpoints.push({ row: snapped.row, col: snapped.col });
+  recalculateSiteRoute(site);
+  setRouteMessage(snapped.distanceCells
+    ? `Checkpoint added and snapped ${snapped.distanceCells.toFixed(1)} cells to walkable ground.`
+    : `Checkpoint ${site.checkpoints.length} added; route recalculated.`);
+}
+
+function renderCheckpointTrack(site) {
+  const track = document.getElementById("checkpoint-track");
+  track.replaceChildren();
+  const stops = [
+    { id: "habitat", label: "Habitat", start: true },
+    ...site.checkpoints.map((point, index) => ({
+      id: `checkpoint-${index}`,
+      label: `C${index + 1}`,
     })),
-    { label: "Return", point: grid.habitat, leg: grid.legs.at(-1) },
   ];
-  document.getElementById("checkpoint-summary").textContent =
-    `${stats.distance_km.toFixed(3)} km total · ${stats.time_h.toFixed(3)} h EVA · `
-    + `${stats.return_margin_h.toFixed(3)} h margin`;
-  document.getElementById("checkpoint-leg-list").innerHTML = points.map((item) => {
-    const meta = item.leg
-      ? `${item.leg.distance_km.toFixed(3)} km · ${item.leg.time_h.toFixed(3)} h`
-      : "departure point";
-    const coordinates = `${item.point.lat.toFixed(5)}°, ${item.point.lon.toFixed(5)}°`;
-    return `<div class="checkpoint-detail"><span class="checkpoint-detail-label">${item.label}</span>`
-      + `<span class="checkpoint-detail-meta">${meta}</span>`
-      + `<span class="checkpoint-detail-coord">${coordinates}</span></div>`;
-  }).join("");
+  if (site.returnToHabitat) stops.push({ id: "return", label: "Habitat", end: true });
+  stops.forEach((stop) => {
+    const button = document.createElement("button");
+    button.className = `checkpoint${stop.start ? " checkpoint-start" : ""}`
+      + `${stop.end ? " checkpoint-end" : ""}`;
+    button.type = "button";
+    button.dataset.checkpoint = stop.id;
+    button.setAttribute("aria-label", `Jump to ${stop.label}`);
+    const marker = document.createElement("i");
+    const label = document.createElement("span");
+    label.textContent = stop.label;
+    button.append(marker, label);
+    track.append(button);
+  });
+}
+
+function renderCheckpointDetails(site) {
+  const { grid, plan } = site;
+  const details = [
+    { id: "habitat", label: "Habitat", point: grid.habitat, leg: null },
+    ...site.checkpoints.map((point, index) => ({
+      id: `checkpoint-${index}`,
+      label: `Checkpoint ${index + 1}`,
+      point,
+      leg: plan.legs[index],
+    })),
+  ];
+  if (site.returnToHabitat) {
+    details.push({
+      id: "return",
+      label: "Return",
+      point: grid.habitat,
+      leg: plan.legs.at(-1),
+    });
+  }
+  document.getElementById("checkpoint-summary").textContent = plan.unreachable
+    ? "No safe path for one or more legs"
+    : `${plan.distanceKm.toFixed(3)} km total · ${plan.timeH.toFixed(3)} h EVA · `
+      + `${plan.returnMarginH.toFixed(3)} h margin`;
+  document.getElementById("checkpoint-leg-list").replaceChildren(
+    ...details.map((item) => {
+      const location = mapToLatLon(...gridToMap(site, item.point.row, item.point.col));
+      const meta = item.leg?.unreachable
+        ? "No safe path"
+        : item.leg
+          ? `${item.leg.distanceKm.toFixed(3)} km · ${item.leg.timeH.toFixed(3)} h`
+          : "Departure point";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "checkpoint-detail checkpoint-detail-jump";
+      button.dataset.checkpoint = item.id;
+      button.innerHTML = `<span class="checkpoint-detail-label">${item.label}</span>`
+        + `<span class="checkpoint-detail-meta">${meta}</span>`
+        + `<span class="checkpoint-detail-coord">${location.lat.toFixed(5)}°, `
+        + `${location.lon.toFixed(5)}°</span>`;
+      return button;
+    }),
+  );
+}
+
+function renderCheckpointMarkers(site) {
+  site.checkpointMarkers.clearLayers();
+  site.checkpoints.forEach((point, index) => {
+    const marker = L.marker(gridToMap(site, point.row, point.col), {
+      icon: L.divIcon({
+        className: "manual-checkpoint-icon",
+        html: `<span>${index + 1}</span>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      }),
+      draggable: true,
+      pane: "targets-pane",
+      zIndexOffset: 500,
+      bubblingMouseEvents: false,
+    });
+    marker.bindTooltip(`Checkpoint ${index + 1} · drag to move`);
+    marker.bindPopup(
+      `<div class="checkpoint-popup"><strong>Checkpoint ${index + 1}</strong>`
+      + `<button type="button" class="checkpoint-delete">Delete checkpoint</button>`
+      + `<button type="button" class="checkpoint-cancel">Cancel</button></div>`,
+    );
+    marker.on("popupopen", (event) => {
+      const popup = event.popup.getElement();
+      popup.querySelector(".checkpoint-delete").addEventListener("click", () => {
+        removeCheckpoint(site, index);
+      });
+      popup.querySelector(".checkpoint-cancel").addEventListener("click", () => {
+        window.map.closePopup();
+      });
+    });
+    marker.on("dragend", (event) => {
+      const current = site.checkpoints[index];
+      const cell = mapToGrid(site, event.target.getLatLng().lat, event.target.getLatLng().lng);
+      const snapped = cell.inside
+        ? nearestWalkableCell(site, cell.row, cell.col)
+        : null;
+      if (!snapped) {
+        marker.setLatLng(gridToMap(site, current.row, current.col));
+        setRouteMessage(cell.inside
+          ? "No walkable cell within 5 cells; checkpoint kept at its previous location."
+          : "Checkpoint must remain inside the active site.", true);
+        return;
+      }
+      site.checkpoints[index] = { row: snapped.row, col: snapped.col };
+      recalculateSiteRoute(site, index);
+      setRouteMessage(snapped.distanceCells
+        ? `Checkpoint moved and snapped ${snapped.distanceCells.toFixed(1)} cells to walkable ground.`
+        : "Checkpoint moved; adjacent route legs recalculated.");
+    });
+    marker.addTo(site.checkpointMarkers);
+  });
+}
+
+function renderRoute(site) {
+  const route = siteLayers[site.key].route;
+  route.clearLayers();
+  site.plan.legs.forEach((leg, index) => {
+    const positions = leg.path.map(([row, col]) => gridToMap(site, row, col));
+    if (positions.length < 2) return;
+    if (leg.unreachable) {
+      L.polyline(positions, {
+        color: "#ff6b6b",
+        weight: 3,
+        dashArray: "6 7",
+        lineCap: "round",
+        bubblingMouseEvents: false,
+        pane: "route-pane",
+      }).bindTooltip("No safe path found · straight line only").addTo(route);
+      return;
+    }
+    const isReturn = site.returnToHabitat && index === site.plan.legs.length - 1;
+    const color = isReturn ? "#68e1fd" : "#fbbf24";
+    L.polyline(positions, {
+      color: "#080d16",
+      weight: 7,
+      opacity: .9,
+      lineCap: "round",
+      lineJoin: "round",
+      bubblingMouseEvents: false,
+      pane: "route-pane",
+    }).addTo(route);
+    L.polyline(positions, {
+      color,
+      weight: 3,
+      opacity: 1,
+      dashArray: isReturn ? null : "10 8",
+      lineCap: "round",
+      lineJoin: "round",
+      bubblingMouseEvents: false,
+      pane: "route-pane",
+    }).bindTooltip(isReturn ? "Return to Habitat" : `Route leg ${index + 1}`).addTo(route);
+  });
+  const routeToggle = document.getElementById("route-toggle");
+  setLayerVisible(route, selectedSite === site.key && routeToggle.checked);
+}
+
+function updateCheckpointUI(site) {
+  renderCheckpointTrack(site);
+  renderCheckpointDetails(site);
+  renderCheckpointMarkers(site);
+  setLayerVisible(
+    siteLayers[site.key].targets,
+    selectedSite === site.key && document.getElementById("targets-toggle").checked,
+  );
+  renderRoute(site);
+  document.getElementById("return-to-habitat").checked = site.returnToHabitat;
+  document.getElementById("undo-checkpoint").disabled = site.checkpoints.length === 0;
+  document.getElementById("clear-checkpoints").disabled = site.checkpoints.length === 0;
 }
 
 function jumpToCheckpoint(checkpointId) {
@@ -269,7 +531,7 @@ function jumpToCheckpoint(checkpointId) {
   const site = siteData[selectedSite];
   const point = checkpointId === "habitat" || checkpointId === "return"
     ? site.grid.habitat
-    : site.grid.targets.find((target) => target.id === checkpointId);
+    : site.checkpoints[Number(checkpointId.slice("checkpoint-".length))];
   if (!point) return;
   const zoom = Math.min(window.map.getMaxZoom(), window.siteMinZoom + 3);
   window.map.flyTo(gridToMap(site, point.row, point.col), zoom, { duration: 0.45 });
@@ -278,46 +540,26 @@ function jumpToCheckpoint(checkpointId) {
   });
 }
 
-function buildSiteLayers(siteKey, stats, grid) {
-  const site = { key: siteKey, name: grid.site_name, stats, grid };
+function buildSiteLayers(siteKey, grid, routeGrid) {
+  const site = {
+    key: siteKey,
+    name: grid.site_name,
+    grid,
+    routeGrid,
+    checkpoints: grid.targets.map(({ row, col }) => ({ row, col })),
+    returnToHabitat: true,
+    checkpointMarkers: null,
+    plan: null,
+  };
   site.bounds = boundsToMap(grid.geo_reference.bounds);
-  const outboundPixels = grid.route_segments.slice(0, -1).flatMap((segment, index) =>
-    index === 0 ? segment : segment.slice(1));
-  const returnPixels = grid.route_segments.at(-1);
-  const route = L.layerGroup([
-    L.polyline(outboundPixels.map(([row, col]) => gridToMap(site, row, col)), {
-      color: "#080d16", weight: 7, opacity: .9, lineCap: "round", lineJoin: "round",
-      pane: "route-pane",
-    }),
-    L.polyline(outboundPixels.map(([row, col]) => gridToMap(site, row, col)), {
-      color: "#fbbf24", weight: 3, opacity: 1, dashArray: "10 8",
-      lineCap: "round", lineJoin: "round", pane: "route-pane",
-    }).bindTooltip("Outbound leg · Habitat → science targets"),
-    L.polyline(returnPixels.map(([row, col]) => gridToMap(site, row, col)), {
-      color: "#080d16", weight: 8, opacity: .9, lineCap: "round", lineJoin: "round",
-      pane: "route-pane",
-    }),
-    L.polyline(returnPixels.map(([row, col]) => gridToMap(site, row, col)), {
-      color: "#68e1fd", weight: 4, opacity: 1,
-      lineCap: "round", lineJoin: "round", pane: "route-pane",
-    }).bindTooltip("Return leg · Target 3 → Habitat"),
-  ]).addTo(window.map);
-  const targets = L.layerGroup();
-  grid.targets.forEach((target) => {
-    const marker = L.circleMarker(gridToMap(site, target.row, target.col), {
-      radius: 9, color: "#080d16", weight: 3, fillColor: "#fbbf24", fillOpacity: 1,
-      pane: "targets-pane",
-    });
-    const label = `Target ${target.id.split("-")[1]}`;
-    const leg = grid.legs.find((item) => item.name === target.id);
-    marker.bindTooltip(`${label} · ${leg.distance_km.toFixed(3)} km · ${leg.time_h.toFixed(3)} h`);
-    marker.bindPopup(`<strong>${label}</strong><div class="photo-slot">CTX imagery<br>real surface preview</div>`);
-    marker.addTo(targets);
-  });
+  const route = L.layerGroup().addTo(window.map);
+  const targets = L.layerGroup().addTo(window.map);
+  const checkpointMarkers = L.layerGroup().addTo(targets);
+  site.checkpointMarkers = checkpointMarkers;
   L.circleMarker(gridToMap(site, grid.habitat.row, grid.habitat.col), {
     radius: 8, color: "#080d16", weight: 3, fillColor: "#68e1fd", fillOpacity: 1,
-    pane: "targets-pane",
-  }).bindTooltip(`Habitat · return ${grid.legs.at(-1).distance_km.toFixed(3)} km · ${grid.legs.at(-1).time_h.toFixed(3)} h`)
+    pane: "targets-pane", bubblingMouseEvents: false,
+  }).bindTooltip("Habitat · placeholder departure point")
     .bindPopup("<strong>Habitat</strong><br>Placeholder departure point.").addTo(targets);
 
   const output = {
@@ -335,31 +577,62 @@ function buildSiteLayers(siteKey, stats, grid) {
     layer._desiredOpacity = defaults[name];
     setLayerVisible(layer, false);
   });
+  site.plan = RoutePlanner.planRoute(
+    routeGrid,
+    grid.habitat,
+    site.checkpoints,
+    site.returnToHabitat,
+  );
   siteData[siteKey] = site;
   siteLayers[siteKey] = output;
+  renderCheckpointMarkers(site);
+  setLayerVisible(output.targets, false);
+  renderRoute(site);
 }
 
 function updateSiteSummary(site) {
-  const { grid, stats } = site;
-  document.getElementById("distance").textContent = formatNumber(stats.distance_km, "km", 3);
-  document.getElementById("time").textContent = formatNumber(stats.time_h, "h", 3);
-  document.getElementById("margin").textContent = formatNumber(stats.return_margin_h, "h", 3);
-  document.getElementById("dose").textContent = formatNumber(stats.est_dose_msv, "mSv", 4);
+  const { grid, plan } = site;
+  const parameters = site.routeGrid.parameters;
+  document.getElementById("distance").textContent = plan.distanceKm === null
+    ? "NO ROUTE"
+    : formatNumber(plan.distanceKm, "km", 3);
+  document.getElementById("time").textContent = plan.timeH === null
+    ? "--"
+    : formatNumber(plan.timeH, "h", 3);
+  document.getElementById("margin").textContent = plan.returnMarginH === null
+    ? "--"
+    : formatNumber(plan.returnMarginH, "h", 3);
+  document.getElementById("margin-label").textContent = site.returnToHabitat
+    ? "Return margin"
+    : "EVA margin · return off";
+  document.getElementById("dose").textContent = plan.doseMsv === null
+    ? "--"
+    : formatNumber(plan.doseMsv, "mSv", 4);
   const safetyStatus = document.getElementById("safety-status");
-  const withinLimit = stats.return_margin_h >= 0;
-  const tightMargin = withinLimit && stats.return_margin_h < 0.25;
-  safetyStatus.textContent = !withinLimit
-    ? "OVER EVA LIMIT"
-    : tightMargin ? "LOW RETURN MARGIN" : "WITHIN EVA LIMIT";
-  safetyStatus.classList.toggle("warning", !withinLimit);
-  safetyStatus.classList.toggle("caution", tightMargin);
+  const withinLimit = plan.timeH !== null && plan.returnMarginH >= 0;
+  const tightMargin = withinLimit && plan.returnMarginH < 0.25;
+  safetyStatus.textContent = plan.unreachable
+    ? "NO SAFE PATH"
+    : !withinLimit
+      ? "OVER EVA LIMIT"
+      : tightMargin ? "LOW EVA MARGIN" : "WITHIN EVA LIMIT";
+  safetyStatus.classList.toggle("warning", plan.unreachable || !withinLimit);
+  safetyStatus.classList.toggle("caution", !plan.unreachable && tightMargin);
   document.getElementById("load-status").textContent =
-    "Real DEM, CTX imagery and lower-resolution surrounding NASA context loaded. Habitat and target coordinates are placeholders.";
+    "Live A* route uses the supplied DEM-derived cost grid. Habitat and science locations are placeholders.";
   document.getElementById("site-name").textContent = grid.site_name;
   document.getElementById("site-region").textContent = "Real NASA data";
   document.getElementById("site-select").value = site.key;
-  document.getElementById("slope-limit").textContent = `${grid.max_walkable_slope_deg}°+`;
-  renderCheckpointDetails(grid, stats);
+  document.getElementById("slope-limit").textContent =
+    `${parameters.max_walkable_slope_deg}°+`;
+  document.getElementById("safety-intro").textContent = site.returnToHabitat
+    ? "Live A* estimate · return to Habitat included"
+    : "Live A* estimate · return to Habitat is off";
+  document.getElementById("route-assumptions").textContent =
+    `ASSUMPTIONS · ${parameters.walking_speed_kmh} km/h · `
+    + `${parameters.eva_hours} h EVA · `
+    + `${parameters.dose_rate_msv_per_hour} mSv/h dose`;
+  updateCheckpointUI(site);
   renderCoordinateStatus();
 }
 
@@ -400,12 +673,27 @@ function flyToSite(siteKey) {
 }
 
 async function loadSiteData(siteKey) {
-  const root = `/data/processed/${siteKey}/`;
-  const [stats, grid] = await Promise.all([
-    fetch(`${root}stats.json`).then((response) => response.json()),
-    fetch(`${root}grid.json`).then((response) => response.json()),
+  const processedRoot = `/data/processed/${siteKey}/`;
+  const costRoot = `data/${siteKey}/`;
+  const [grid, costMetadata, costResponse] = await Promise.all([
+    fetchJson(`${processedRoot}grid.json`),
+    fetchJson(`${costRoot}cost.json`),
+    fetch(`${costRoot}cost.bin`),
   ]);
-  buildSiteLayers(siteKey, stats, grid);
+  if (!costResponse.ok) {
+    throw new Error(`Could not load ${siteKey} route grid: HTTP ${costResponse.status}`);
+  }
+  const routeGrid = RoutePlanner.decodeGrid(costMetadata, await costResponse.arrayBuffer());
+  if (routeGrid.site !== siteKey || routeGrid.rows !== grid.rows || routeGrid.cols !== grid.cols) {
+    throw new Error(`${siteKey} route grid does not match the site data`);
+  }
+  buildSiteLayers(siteKey, grid, routeGrid);
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not load ${url}: HTTP ${response.status}`);
+  return response.json();
 }
 
 function addSiteBoundaries() {
@@ -419,6 +707,7 @@ function addSiteBoundaries() {
       fill: false,
       pane: "boundaries-pane",
       className: "site-boundary",
+      bubblingMouseEvents: false,
     });
     boundary._siteKey = siteKey;
     boundary.on("click", () => flyToSite(siteKey));
@@ -468,7 +757,7 @@ function addBackdrop(backdrop) {
 }
 
 async function loadPlanner() {
-  const backdrop = await fetch("data/backdrop.json").then((response) => response.json());
+  const backdrop = await fetchJson("data/backdrop.json");
   setGeoReference(backdrop);
   window.map = L.map("map", {
     crs: L.CRS.Simple,
@@ -477,6 +766,7 @@ async function loadPlanner() {
     zoomControl: false,
     attributionControl: false,
   });
+  setupSidebarToggle(window.map);
   const paneOrder = {
     "backdrop-imagery": 100,
     "backdrop-hillshade": 110,
@@ -501,6 +791,34 @@ async function loadPlanner() {
 
   const siteSelect = document.getElementById("site-select");
   siteSelect.addEventListener("change", () => flyToSite(siteSelect.value));
+  const routeChip = document.querySelector(".map-route-chip");
+  L.DomEvent.disableClickPropagation(routeChip);
+  document.getElementById("add-checkpoint").addEventListener("click", () => {
+    setRouteMode(!routeMode);
+  });
+  document.getElementById("auto-plan").addEventListener("click", () => {
+    const site = siteData[selectedSite];
+    setRouteMode(false);
+    site.checkpoints = site.grid.targets.map(({ row, col }) => ({ row, col }));
+    recalculateSiteRoute(site);
+    setRouteMessage("Auto plan restored the three placeholder science targets.");
+  });
+  document.getElementById("undo-checkpoint").addEventListener("click", () => {
+    const site = siteData[selectedSite];
+    if (site.checkpoints.length) removeCheckpoint(site, site.checkpoints.length - 1);
+  });
+  document.getElementById("clear-checkpoints").addEventListener("click", () => {
+    const site = siteData[selectedSite];
+    setRouteMode(false);
+    site.checkpoints = [];
+    recalculateSiteRoute(site);
+    setRouteMessage("All science checkpoints cleared.");
+  });
+  document.getElementById("return-to-habitat").addEventListener("change", (event) => {
+    const site = siteData[selectedSite];
+    site.returnToHabitat = event.target.checked;
+    recalculateSiteRoute(site);
+  });
   setLayerControl("terrain", "terrain-toggle", "terrain-opacity");
   setLayerControl("imagery", "imagery-toggle", "imagery-opacity");
   setLayerControl("slope", "slope-toggle", "slope-opacity");
@@ -519,6 +837,11 @@ async function loadPlanner() {
     const checkpoint = event.target.closest(".checkpoint");
     if (checkpoint) jumpToCheckpoint(checkpoint.dataset.checkpoint);
   });
+  document.getElementById("checkpoint-leg-list").addEventListener("click", (event) => {
+    const checkpoint = event.target.closest("[data-checkpoint]");
+    if (checkpoint) jumpToCheckpoint(checkpoint.dataset.checkpoint);
+  });
+  window.map.on("click", (event) => addCheckpointAt(event.latlng));
   window.map.on("mousemove", (event) => {
     if (!selectedSite) return;
     const site = siteData[selectedSite];
@@ -554,5 +877,6 @@ async function loadPlanner() {
 setupSidebarResizer();
 loadPlanner().catch((error) => {
   console.error(error);
-  document.getElementById("load-status").textContent = "Could not load processed layers.";
+  document.getElementById("load-status").textContent =
+    `Could not load the planner: ${error.message}`;
 });

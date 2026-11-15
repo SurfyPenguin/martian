@@ -23,6 +23,12 @@ from `data/processed/<site>/`; the surrounding map is real NASA data at lower
 resolution for context only. Never put raw downloads in the repository or
 read from `data/raw/` outside `scripts/make_backdrop.py`.
 
+Use **Add checkpoint** on the map, then click inside the active site's outline
+to add a route stop. Drag a checkpoint to move it; use Undo, Clear, or Auto
+plan to edit the route. The optional return-to-Habitat toggle updates the route
+and safety summary immediately. Manual stops last only for the current page
+session.
+
 ## Optional placeholder fallback
 
 Synthetic generation is disabled by default and is never part of the web

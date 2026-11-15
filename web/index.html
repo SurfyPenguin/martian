@@ -11,8 +11,11 @@
 </head>
 <body>
   <main class="shell">
-    <aside class="sidebar">
-      <div class="brand-mark" aria-label="MarsWalk"><span></span><span></span></div>
+    <aside id="mission-sidebar" class="sidebar">
+      <button id="sidebar-toggle" class="brand-mark" type="button" aria-expanded="true"
+        aria-controls="mission-sidebar" aria-label="Hide mission panel to view the map">
+        <span></span><span></span>
+      </button>
       <header class="mission-header">
         <h1 id="site-name">Mars field plan</h1>
         <div class="mission-meta"><span id="site-region">Real NASA data</span><span>3 targets</span></div>
@@ -46,11 +49,12 @@
           <h2>Safety summary</h2>
           <span id="safety-status" class="safety-status">CHECKING</span>
         </div>
-        <div class="safety-intro">Automated route estimate · return to Habitat included</div>
+        <div id="safety-intro" class="safety-intro">Live A* estimate · return to Habitat included</div>
         <div class="stat"><span>Route distance</span><strong id="distance">--</strong></div>
         <div class="stat"><span>Estimated EVA time</span><strong id="time">--</strong></div>
-        <div class="stat"><span>Return margin</span><strong id="margin">--</strong></div>
+        <div class="stat"><span id="margin-label">Return margin</span><strong id="margin">--</strong></div>
         <div class="stat"><span>Estimated dose</span><strong id="dose">--</strong></div>
+        <div id="route-assumptions" class="safety-intro">ASSUMPTIONS · loading</div>
       </section>
 
       <section class="legend control-section">
@@ -78,24 +82,29 @@
             <span class="route-chip-kicker">MISSION CHECKPOINTS</span>
             <strong id="checkpoint-summary">Real route · loading details</strong>
           </div>
-          <button id="checkpoint-toggle" class="checkpoint-toggle" type="button"
-            aria-expanded="false" aria-controls="checkpoint-details">Expand <i></i></button>
+          <div class="checkpoint-bar-actions">
+            <button id="add-checkpoint" class="checkpoint-add" type="button"
+              aria-pressed="false">Add checkpoint</button>
+            <button id="sidebar-reopen" class="sidebar-reopen" type="button" hidden>
+              Mission data
+            </button>
+            <button id="checkpoint-toggle" class="checkpoint-toggle" type="button"
+              aria-expanded="false" aria-controls="checkpoint-details">Expand <i></i></button>
+          </div>
         </div>
+        <div class="checkpoint-tools">
+          <button id="auto-plan" class="checkpoint-tool" type="button">Auto plan</button>
+          <button id="undo-checkpoint" class="checkpoint-tool" type="button" disabled>Undo</button>
+          <button id="clear-checkpoints" class="checkpoint-tool" type="button" disabled>Clear</button>
+          <label class="return-toggle"><input id="return-to-habitat" type="checkbox" checked>
+            Return to Habitat</label>
+        </div>
+        <div id="route-status" class="route-status" role="status" aria-live="polite"></div>
         <div id="checkpoint-track" class="checkpoint-track" aria-label="Clickable mission checkpoints">
-          <button class="checkpoint checkpoint-start" type="button" data-checkpoint="habitat"
-            aria-label="Jump to Habitat departure point"><i></i><span>Habitat</span></button>
-          <button class="checkpoint" type="button" data-checkpoint="target-1"
-            aria-label="Jump to Target 1"><i></i><span>T1</span></button>
-          <button class="checkpoint" type="button" data-checkpoint="target-2"
-            aria-label="Jump to Target 2"><i></i><span>T2</span></button>
-          <button class="checkpoint" type="button" data-checkpoint="target-3"
-            aria-label="Jump to Target 3"><i></i><span>T3</span></button>
-          <button class="checkpoint checkpoint-end" type="button" data-checkpoint="return"
-            aria-label="Jump to Habitat return point"><i></i><span>Habitat</span></button>
         </div>
         <div id="checkpoint-details" class="checkpoint-details">
           <div id="checkpoint-leg-list"></div>
-          <span class="checkpoint-note">Coordinates are placeholder mission points.</span>
+          <span class="checkpoint-note">Stops are in-memory planning points. A* avoids impassable terrain; walk speed and dose are assumptions.</span>
         </div>
       </section>
       <div id="map-inspector" class="map-inspector" aria-live="polite">
@@ -109,6 +118,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="geo.js"></script>
+  <script src="route.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

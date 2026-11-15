@@ -13,12 +13,14 @@ decimated backdrop generator; the site pipeline uses the supplied processed
 rasters.
 
 **Goal:** Build a layered, interactive EVA planning map that combines supplied
-NASA-provided DEM and CTX inputs with derived hazard and route information.
+NASA-provided DEM and CTX inputs with derived hazard and route information. A
+lower-resolution surrounding backdrop provides context only; routing is limited
+to the two full-resolution sites.
 
 ## 2. Solution: "MarsWalk Planner"
 
 A tablet-style web app used to inspect a site, compare terrain layers, and plan
-a route between placeholder science targets.
+a route between placeholder science targets or manually added checkpoints.
 
 **Locations:** Two supplied sites in Gale Crater:
 **Gale crater floor** and **Southern box**. The inputs are treated as
@@ -32,7 +34,9 @@ the placeholders before operational use.
 **Scope (current MVP):**
 - Two selectable sites
 - CTX imagery, elevation, slope, and slope/roughness hazard layers
-- One route between three placeholder science targets and back to habitat
+- Live A* routes between manually placed checkpoints and back to habitat
+- Auto plan using three placeholder science targets
+- Per-site checkpoint plans held in memory for the current page session
 - Assumption-based dose and EVA safety summary
 
 ## 3. Data Layers
@@ -53,10 +57,14 @@ available in this repository.
 
 1. **Layer toggles** for all current datasets on one map.
 2. **Hazard map** flagging slope and rough terrain.
-3. **Route planner:** A* pathfinding over slope and roughness cost between targets.
+3. **Route planner:** Browser-side A* pathfinding over exported slope and
+   roughness costs between checkpoints, with distance, time, dose, and
+   unreachable-leg feedback.
 4. **Safety sidebar:** assumption-based dose estimate, EVA time budget, and
    distance back to habitat.
-5. **Checkpoint controls:** clickable habitat and target stops with per-leg details.
+5. **Checkpoint controls:** add checkpoints by clicking the map, drag to move,
+   snap to nearby walkable cells, delete, undo, clear, or restore the automatic
+   placeholder plan. The optional return leg and per-leg details update live.
 
 ## 5. Architecture
 
@@ -67,7 +75,8 @@ scripts/
   inspect_data.py  input schema inspection
   make_backdrop.py decimated context imagery/hillshade -> web/data/
   slope.py       DEM -> meter-scaled slope/roughness -> hazard and PNG layers
-  route.py       A* over the cost map -> data/processed/<site>/
+  route.py       A* over the cost map -> data/processed/<site>/;
+                 browser cost grids -> web/data/<site>/
 data/processed/  supplied inputs and per-site rasters, PNGs, route, stats, grid
 web/
   index.html, app.js, geo.js, style.css   Leaflet app and shared projection
@@ -76,8 +85,9 @@ web/
 
 **Pipeline:** inspect inputs -> generate decimated backdrop context -> compute
 meter-scaled slope and 5x5 roughness -> build traversability score -> run A*
-per site -> export aligned PNG, GeoJSON, stats, and grid metadata -> Leaflet
-loads both sites in the shared Mars map projection.
+per site -> export aligned PNG, GeoJSON, stats, route metadata, and browser
+cost grids -> Leaflet loads both sites and route grids in the shared Mars map
+projection.
 
 ## 6. Assumptions
 
@@ -108,7 +118,9 @@ These are not verified mission measurements or predictions.
 - `python scripts/inspect_data.py` documents the supplied inputs
 - `python scripts/slope.py --site site1` and `python scripts/route.py --site site1`
   produce that site's outputs; repeat for site2
-- `web/index.html` shows aligned layers, route, checkpoints, and safety summary
+- `scripts/route.py` writes browser route-cost grids and metadata for both sites
+- `web/index.html` shows aligned layers, allows manual checkpoint editing, and
+  recalculates the route and safety summary
 - README explains the real-data run in five steps or fewer
 - At least three data views are layered and assumptions/placeholders are explicit
 

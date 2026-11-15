@@ -82,6 +82,17 @@
 - Added the low-resolution, no-route-data context label and clarified that the
   surrounding map is real NASA data; confirmed CTX texture continuity across
   both site boxes and browser switching without application console errors
+- Exported per-site little-endian Float32 route-cost grids and metadata for
+  browser routing without exposing full-resolution source rasters
+- Added browser A* with live distance, time, dose, and return-margin estimates;
+  passable-cell snapping; and explicit no-safe-path feedback
+- Added visible checkpoint controls for map-click placement, dragging,
+  delete/cancel, undo, clear, auto plan, and optional return to Habitat; manual
+  checkpoint edits remain in memory per site for the current page session
+- Added a mobile map/sidebar toggle so checkpoint placement remains accessible
+  when the mission panel is hidden
+- Verified Python/browser route parity for all eight stored route legs and
+  exercised mobile checkpoint placement without console or network errors
 
 ## In progress
 (nothing)
