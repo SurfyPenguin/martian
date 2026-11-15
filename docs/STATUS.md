@@ -126,6 +126,8 @@
   detail zoom, with the map's zoom-in controls capped at the same level
 - Rewrote README setup and usage instructions; documented NASA dataset
   provenance limits, map layers, EVA assumptions, challenge links, and AI use
+- Refreshed `docs/HANDOFF.md` with the current local merge state, app behavior,
+  dataset limits, assumptions, verification commands, and remaining work
 
 ## In progress
 (nothing)
