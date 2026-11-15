@@ -5,10 +5,15 @@ const SITE_OPTIONS = {
   site1: "Gale crater floor",
   site2: "Southern box",
 };
+const ZOOM_SLIDER_MIN_PERCENT = 100;
+const ZOOM_SLIDER_MAX_PERCENT = 300;
+const ZOOM_SLIDER_STEP = 10;
+const SITE_DETAIL_ZOOM_LEVELS = 3;
 let selectedSite = null;
 let pendingSite = null;
 let backdropBounds = null;
 let routeMode = false;
+let routeMessageTimer = null;
 const ALGORITHM_DESCRIPTIONS = {
   astar: "A* uses an octile-distance heuristic and is guaranteed optimal for this cost grid.",
   dijkstra: "Dijkstra expands without a heuristic; it is guaranteed optimal but explores more cells.",
@@ -200,19 +205,35 @@ function createZoomPercentageControl(map, minZoom) {
   const output = L.DomUtil.create("output", "", element);
   const slider = L.DomUtil.create("input", "", element);
   slider.type = "range";
-  slider.min = "100";
-  slider.max = "300";
-  slider.step = "25";
-  slider.value = "100";
+  slider.min = String(ZOOM_SLIDER_MIN_PERCENT);
+  slider.max = String(ZOOM_SLIDER_MAX_PERCENT);
+  slider.step = String(ZOOM_SLIDER_STEP);
+  slider.value = String(ZOOM_SLIDER_MIN_PERCENT);
   slider.setAttribute("aria-label", "Map zoom percentage");
   const sync = () => {
-    const percentage = 100 * (2 ** (map.getZoom() - (window.mapMinZoom || minZoom)));
-    const value = Math.min(300, Math.max(100, Math.round(percentage / 25) * 25));
-    slider.value = value;
+    const minimumZoom = map.getMinZoom() ?? minZoom;
+    const zoomRange = map.getMaxZoom() - minimumZoom;
+    const percentage = zoomRange > 0
+      ? ZOOM_SLIDER_MIN_PERCENT
+        + ((map.getZoom() - minimumZoom) / zoomRange)
+          * (ZOOM_SLIDER_MAX_PERCENT - ZOOM_SLIDER_MIN_PERCENT)
+      : ZOOM_SLIDER_MIN_PERCENT;
+    const value = Math.min(
+      ZOOM_SLIDER_MAX_PERCENT,
+      Math.max(
+        ZOOM_SLIDER_MIN_PERCENT,
+        Math.round(percentage / ZOOM_SLIDER_STEP) * ZOOM_SLIDER_STEP,
+      ),
+    );
+    slider.value = String(value);
     output.textContent = `${value}%`;
   };
   L.DomEvent.on(slider, "input", () => {
-    map.setZoom((window.mapMinZoom || minZoom) + Math.log2(Number(slider.value) / 100));
+    const minimumZoom = map.getMinZoom() ?? minZoom;
+    const zoomRange = map.getMaxZoom() - minimumZoom;
+    const percentageRange = ZOOM_SLIDER_MAX_PERCENT - ZOOM_SLIDER_MIN_PERCENT;
+    const progress = (Number(slider.value) - ZOOM_SLIDER_MIN_PERCENT) / percentageRange;
+    map.setZoom(minimumZoom + progress * zoomRange, { animate: false });
   });
   map.on("zoomend", sync);
   sync();
@@ -310,10 +331,18 @@ function nearestFreeCell(site, row, col, safetyMarginCells = site.safetyMarginCe
   return nearest;
 }
 
-function setRouteMessage(message, isError = false) {
+function setRouteMessage(message, isError = false, clearAfterMs = 0) {
   const status = document.getElementById("route-status");
+  if (routeMessageTimer !== null) window.clearTimeout(routeMessageTimer);
+  routeMessageTimer = null;
   status.textContent = message;
   status.classList.toggle("is-error", isError);
+  if (clearAfterMs > 0) {
+    routeMessageTimer = window.setTimeout(() => {
+      if (status.textContent === message) status.textContent = "";
+      routeMessageTimer = null;
+    }, clearAfterMs);
+  }
 }
 
 function setRouteMode(enabled) {
@@ -378,7 +407,7 @@ function removeCheckpoint(site, index) {
   window.map.closePopup();
   site.checkpoints.splice(index, 1);
   recalculateSiteRoute(site);
-  setRouteMessage(`Checkpoint ${index + 1} deleted; remaining legs recalculated.`);
+  setRouteMessage(`Checkpoint ${index + 1} deleted; remaining legs recalculated.`, false, 4000);
 }
 
 function addCheckpointAt(latlng) {
@@ -398,7 +427,7 @@ function addCheckpointAt(latlng) {
   recalculateSiteRoute(site);
   setRouteMessage(snapped.distanceCells
     ? `Checkpoint added and snapped ${snapped.distanceMeters.toFixed(1)} m clear of hazards.`
-    : `Checkpoint ${site.checkpoints.length} added; route recalculated.`);
+    : `Checkpoint ${site.checkpoints.length} added; route recalculated.`, false, 4000);
 }
 
 function renderCheckpointTrack(site) {
@@ -463,10 +492,24 @@ function renderCheckpointDetails(site) {
       button.type = "button";
       button.className = "checkpoint-detail checkpoint-detail-jump";
       button.dataset.checkpoint = item.id;
-      button.innerHTML = `<span class="checkpoint-detail-label">${item.label}</span>`
-        + `<span class="checkpoint-detail-meta">${meta}</span>`
-        + `<span class="checkpoint-detail-coord">${location.lat.toFixed(5)}°, `
-        + `${location.lon.toFixed(5)}°</span>`;
+      const label = document.createElement("span");
+      label.className = "checkpoint-detail-label";
+      label.textContent = item.label;
+      const legSummary = document.createElement("span");
+      legSummary.className = "checkpoint-detail-meta";
+      legSummary.textContent = meta;
+      const coordinates = document.createElement("span");
+      coordinates.className = "checkpoint-detail-coord";
+      for (const [axis, value] of [["LAT", location.lat], ["LON", location.lon]]) {
+        const axisLabel = document.createElement("span");
+        axisLabel.className = "checkpoint-detail-axis";
+        axisLabel.textContent = axis;
+        const coordinate = document.createElement("span");
+        coordinate.className = "checkpoint-detail-value";
+        coordinate.textContent = `${value.toFixed(4)}°`;
+        coordinates.append(axisLabel, coordinate);
+      }
+      button.append(label, legSummary, coordinates);
       return button;
     }),
   );
@@ -633,7 +676,10 @@ function jumpToCheckpoint(checkpointId) {
     ? site.grid.habitat
     : site.checkpoints[Number(checkpointId.slice("checkpoint-".length))];
   if (!point) return;
-  const zoom = Math.min(window.map.getMaxZoom(), window.siteMinZoom + 3);
+  const zoom = Math.min(
+    window.map.getMaxZoom(),
+    window.siteMinZoom + SITE_DETAIL_ZOOM_LEVELS,
+  );
   window.map.flyTo(gridToMap(site, point.row, point.col), zoom, { duration: 0.45 });
   document.querySelectorAll(".checkpoint").forEach((checkpoint) => {
     checkpoint.classList.toggle("is-selected", checkpoint.dataset.checkpoint === checkpointId);
@@ -787,6 +833,10 @@ function activateSite(siteKey) {
   selectedSite = siteKey;
   const site = siteData[siteKey];
   window.siteMinZoom = window.map.getBoundsZoom(site.bounds);
+  window.map.setMaxZoom(Math.min(
+    window.map.options.maxZoom,
+    window.siteMinZoom + SITE_DETAIL_ZOOM_LEVELS,
+  ));
   window.siteBounds = site.bounds;
   Object.keys(siteLayers).forEach((key) => {
     const active = key === siteKey;
@@ -927,6 +977,7 @@ async function loadPlanner() {
     crs: L.CRS.Simple,
     minZoom: -12,
     maxZoom: 18,
+    zoomSnap: 0.05,
     zoomControl: false,
     attributionControl: false,
   });
@@ -951,7 +1002,6 @@ async function loadPlanner() {
   const backdropMinZoom = window.map.getBoundsZoom(backdropBounds);
   window.map.setMaxBounds(paddedBackdropBounds);
   window.map.setMinZoom(backdropMinZoom);
-  window.mapMinZoom = backdropMinZoom;
 
   const siteSelect = document.getElementById("site-select");
   siteSelect.addEventListener("change", () => flyToSite(siteSelect.value));
@@ -1039,13 +1089,13 @@ async function loadPlanner() {
   window.map.on("mousemove", (event) => {
     if (!selectedSite) return;
     const site = siteData[selectedSite];
-    const mapPosition = event.latlng;
-    const location = mapToLatLon(mapPosition[0], mapPosition[1]);
-    const cell = mapToGrid(site, mapPosition[0], mapPosition[1]);
+    const { lat: y, lng: x } = event.latlng;
+    const location = mapToLatLon(y, x);
+    const cell = mapToGrid(site, y, x);
     const habitat = gridToMap(site, site.grid.habitat.row, site.grid.habitat.col);
     const rangeKm = Math.hypot(
-      mapPosition[0] - habitat[0],
-      mapPosition[1] - habitat[1],
+      y - habitat[0],
+      x - habitat[1],
     ) / 1000;
     const latitude = location.lat.toFixed(5);
     const longitude = location.lon.toFixed(5);

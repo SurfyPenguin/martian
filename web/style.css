@@ -1,6 +1,7 @@
 :root {
   color-scheme: dark;
   --sidebar-width: 300px;
+  --font-ui: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --bg: #000;
   --panel: #111;
   --panel-deep: #181818;
@@ -12,7 +13,8 @@
 }
 
 * { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; background: var(--bg); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+html, body { height: 100%; margin: 0; background: var(--bg); font-family: var(--font-ui); }
+button, input, select, textarea { font-family: inherit; }
 body { color: #f2f2f2; }
 .shell { display: grid; grid-template-columns: var(--sidebar-width) 12px 1fr; height: 100vh; }
 .shell.is-sidebar-collapsed { grid-template-columns: 0 0 1fr; }
@@ -27,8 +29,8 @@ body { color: #f2f2f2; }
 .sidebar-resizer:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
 .brand-mark { display: flex; gap: 3px; height: 24px; align-items: center; margin: 0 0 22px 4px; padding: 0; border: 0; background: transparent; color: inherit; cursor: default; }
 .brand-mark span { display: block; width: 12px; height: 12px; border-top: 2px solid #f2f2f2; border-right: 2px solid #f2f2f2; transform: rotate(45deg); }
-h1 { font-size: 22px; letter-spacing: -.06em; line-height: 1.08; margin: 0 0 14px; max-width: 14ch; }
-.mission-meta { display: flex; flex-wrap: wrap; gap: 5px; color: var(--muted); font-size: 12px; letter-spacing: -.03em; }
+h1 { font-size: 22px; letter-spacing: -.04em; line-height: 1.08; margin: 0 0 14px; max-width: 14ch; }
+.mission-meta { display: flex; flex-wrap: wrap; gap: 5px; color: var(--muted); font-size: 12px; letter-spacing: 0; }
 .mission-meta span { border: 1px solid #343434; border-radius: 999px; padding: 4px 7px; }
 .banner { display: flex; align-items: center; gap: 8px; border: 1px solid #383838; background: #1b1b1b; color: #ddd; padding: 10px 11px; border-radius: 8px; font-size: 14px; line-height: 1.35; margin-top: 20px; }
 .status-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 0 3px rgba(195, 173, 255, .1); }
@@ -79,9 +81,9 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .map-scale { box-sizing: border-box; min-width: 40px; background: #111; border: 1px solid #555; color: #eee; padding: 3px 6px; font-size: 12px; text-align: center; white-space: nowrap; }
 .leaflet-pane.backdrop-imagery-pane { filter: brightness(.55) saturate(.7); }
 .leaflet-pane.backdrop-hillshade-pane { filter: brightness(.7) contrast(.9); }
-.site-boundary-label { background: #111; border: 1px solid #3b3b3b; border-radius: 0; box-shadow: none; color: #d7d7d7; font: 700 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .06em; padding: 4px 6px; text-transform: uppercase; }
+.site-boundary-label { background: #111; border: 1px solid #3b3b3b; border-radius: 0; box-shadow: none; color: #d7d7d7; font: 700 12px var(--font-ui); letter-spacing: .06em; padding: 4px 6px; text-transform: uppercase; }
 .site-boundary-label::before { display: none; }
-.backdrop-context-label { background: rgba(17, 17, 17, .92); border: 1px solid #3b3b3b; color: #d7d7d7; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; padding: 5px 7px; white-space: nowrap; width: max-content; }
+.backdrop-context-label { background: rgba(17, 17, 17, .92); border: 1px solid #3b3b3b; color: #d7d7d7; font: 12px/1.35 var(--font-ui); padding: 5px 7px; white-space: nowrap; width: max-content; }
 .north-arrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; background: #181818; border: 1px solid #303030; color: #eee; padding: 7px 8px; line-height: 1; }
 .north-arrow-label { color: #b8a8e8; font-size: 12px; font-weight: 700; letter-spacing: .1em; white-space: nowrap; }
 .north-arrow-compass { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #555; border-radius: 50%; background: #171717; }
@@ -105,11 +107,12 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .map-action { width: 100%; border: 1px solid #303030; border-radius: 0; background: #181818; color: #d7d7d7; cursor: pointer; padding: 8px 9px; text-align: left; font: inherit; font-size: 12px; }
 .map-action:hover { border-color: var(--cyan); color: var(--cyan); }
 .map-zoom-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.map-zoom-button { height: 30px; border: 1px solid #303030; border-radius: 0; background: #181818; color: #d7d7d7; font: 700 18px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; cursor: pointer; }
+.map-zoom-button { height: 30px; border: 1px solid #303030; border-radius: 0; background: #181818; color: #d7d7d7; font: 700 18px/1 var(--font-ui); cursor: pointer; }
 .map-zoom-button:hover, .map-zoom-button:focus-visible { border-color: var(--cyan); background: #1b1824; color: var(--cyan); }
 .map-control-dock button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .load-status { color: var(--cyan) !important; }
 #map { min-height: 100vh; position: relative; background: #000; }
+.leaflet-container, .leaflet-control, .leaflet-control-attribution, .leaflet-popup, .leaflet-tooltip { font-family: var(--font-ui); }
 .leaflet-container { background: #000; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111; color: #f2f2f2; }
 .photo-slot { border: 1px dashed var(--amber); color: var(--amber); margin-top: 8px; padding: 16px 10px; text-align: center; font-size: 12px; }
@@ -118,13 +121,14 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .sidebar-reopen:hover, .sidebar-reopen:focus-visible { border-color: var(--cyan); color: var(--cyan); }
 .sidebar-reopen[hidden] { display: none; }
 .map-route-chip { position: absolute; z-index: 500; top: 16px; left: 18px; width: min(620px, calc(100% - 36px)); padding: 12px 13px 13px; border-radius: 6px; font-size: 12px; transition: width .2s ease, padding .2s ease; }
+.map-route-chip.is-expanded { max-height: calc(100vh - 32px); overflow-y: auto; }
 .map-route-chip.is-collapsed { width: auto; padding: 7px 9px; }
 .checkpoint-bar-header { display: flex; justify-content: space-between; align-items: center; gap: 18px; }
 .is-collapsed .checkpoint-bar-header { align-items: center; }
 .is-collapsed .checkpoint-bar-header > div:first-child { display: none; }
 .is-collapsed .checkpoint-tools, .is-collapsed .route-options, .is-collapsed .route-cards, .is-collapsed .checkpoint-track, .is-collapsed .checkpoint-details { display: none; }
 .route-chip-kicker { display: block; color: #d7d7d7; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: lowercase; }
-.checkpoint-bar-header strong { display: block; margin-top: 6px; color: #aaa; font-size: 12px; font-weight: 500; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.checkpoint-bar-header strong { display: block; margin-top: 6px; color: #aaa; font-size: 12px; font-weight: 500; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .checkpoint-bar-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .checkpoint-add, .checkpoint-tool { border: 1px solid #3b3b3b; border-radius: 0; background: #181818; color: #d7d7d7; padding: 7px 9px; font: inherit; font-size: 12px; cursor: pointer; }
 .checkpoint-add { color: var(--cyan); }
@@ -172,13 +176,15 @@ input[type="range"] { accent-color: var(--cyan); width: 100%; }
 .checkpoint:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; border-radius: 3px; }
 .checkpoint-details { margin-top: 14px; padding-top: 11px; border-top: 1px solid #2e2e2e; }
 .checkpoint-details[hidden] { display: none; }
-#checkpoint-leg-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+#checkpoint-leg-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px 18px; }
 .checkpoint-detail { min-width: 0; }
-.checkpoint-detail-jump { display: block; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.checkpoint-detail-jump { display: grid; gap: 3px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
 .checkpoint-detail-jump:hover .checkpoint-detail-label, .checkpoint-detail-jump:focus-visible .checkpoint-detail-label { color: var(--cyan); }
-.checkpoint-detail-label { color: #e2e2e2; font-size: 12px; font-weight: 700; }
-.checkpoint-detail-meta { display: block; margin-top: 4px; color: #b5b5b5; font-size: 12px; line-height: 1.4; font-variant-numeric: tabular-nums; }
-.checkpoint-detail-coord { display: block; margin-top: 2px; color: #aaa; font-size: 12px; font-variant-numeric: tabular-nums; }
+.checkpoint-detail-label { color: #e2e2e2; font-size: 13px; font-weight: 700; line-height: 1.3; }
+.checkpoint-detail-meta { display: block; color: #c5c5c5; font-size: 13px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.checkpoint-detail-coord { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin-top: 4px; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.checkpoint-detail-axis { color: #aaa; font-size: 11px; font-weight: 700; letter-spacing: .05em; }
+.checkpoint-detail-value { color: #e2e2e2; font-size: 13px; }
 .checkpoint-note { display: block; margin-top: 11px; color: #aaa; font-size: 12px; line-height: 1.4; }
 .manual-checkpoint-icon { display: grid; place-items: center; border: 0; background: transparent; }
 .manual-checkpoint-icon span { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid #080d16; border-radius: 50%; background: #c3adff; color: #111; font-size: 12px; font-weight: 800; box-shadow: 0 2px 6px rgba(0, 0, 0, .6); }
@@ -215,7 +221,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .route-options p { grid-column: auto; }
   .is-collapsed .checkpoint-toggle { gap: 0; font-size: 0; }
   .is-collapsed .checkpoint-toggle::before { content: "Stops"; font-size: 12px; }
-  #checkpoint-leg-list { grid-template-columns: repeat(2, 1fr); }
+  #checkpoint-leg-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
   .map-inspector { bottom: 54px; max-width: calc(100vw - 28px); }
   .map-inspector .statusbar-distance { display: none; }
   .map-control-dock { margin: 0 10px 10px 0; }
