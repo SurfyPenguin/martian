@@ -242,6 +242,41 @@ def build_regions(moon: MoonGeometry, geojson: dict) -> list:
     return features
 
 
+def elevation_extremes(site_dir: Path) -> dict:
+    """Highest and lowest finite pixel of a site's elevation GeoTIFF."""
+    path = site_dir / "elevation.tif"
+    with rasterio.open(path) as source:
+        elevation = source.read(1)
+        transform = source.transform
+    valid = np.isfinite(elevation)
+    high_row, high_col = np.unravel_index(
+        np.argmax(np.where(valid, elevation, -np.inf)), elevation.shape
+    )
+    low_row, low_col = np.unravel_index(
+        np.argmin(np.where(valid, elevation, np.inf)), elevation.shape
+    )
+
+    def xy_of(row, col):
+        # Pixel-center convention: affine maps (col, row) -> (x, y), so the
+        # center of pixel (row, col) sits at (col + 0.5, row + 0.5).
+        x, y = transform * (col + 0.5, row + 0.5)
+        return [round(float(x), 3), round(float(y), 3)]
+
+    return {
+        "raster": str(path.relative_to(ROOT)),
+        "highest": {
+            "row": int(high_row), "col": int(high_col),
+            "value_m": float(elevation[high_row, high_col]),
+            "xy_m": xy_of(high_row, high_col),
+        },
+        "lowest": {
+            "row": int(low_row), "col": int(low_col),
+            "value_m": float(elevation[low_row, low_col]),
+            "xy_m": xy_of(low_row, low_col),
+        },
+    }
+
+
 def build_layers(moon: MoonGeometry) -> dict:
     backdrop = raster_edges(RAW_DIR / BACKDROP_FILE)
     site_layers = {}
@@ -258,6 +293,9 @@ def build_layers(moon: MoonGeometry) -> dict:
                 f"data/processed/moon/{site_key}/{SITE_LAYER_IMAGES[layer]}"
             )
             entries[layer] = entry
+        entries["elevation_extremes"] = elevation_extremes(
+            PROCESSED_DIR / site_key
+        )
         site_layers[site_key] = entries
     return {
         "coordinate_system": "Moon south polar stereographic meters",

@@ -2,6 +2,32 @@
 
 One entry per target, newest work described factually. Branch: `feat/moon`.
 
+## Target 3 - visual alignment aid (2026-11-15)
+
+- `?debug=1` on the page enables a Moon-only debug overlay (Mars is not
+  affected; nothing changes without the query parameter):
+  - a yellow crosshair with a "center <name>" label at every region center
+    (from `regions.json` `center_xy`, 14 regions),
+  - a small cyan corner marker at the four corners of each loaded site
+    raster (16 markers),
+  - for the active site only, a 1 km grid over the planning box (green) and
+    two labelled dots for the site's highest and lowest elevation pixels
+    (from `layers.json` `elevation_extremes`, drawn through the browser's own
+    `gridToMap`),
+  - the debug site layers refresh on every site switch.
+- `scripts/moon_geo.py` now writes per-site `elevation_extremes`
+  (row/col/value/xy in meters from `elevation.tif`) into `layers.json`; the
+  rows/cols match the Target 2 extreme-pixel test exactly.
+- Verification (headless Chrome, Moon mode, Connecting Ridge):
+  16 debug labels present - 14 region centers plus
+  "highest 1959.1 m · r297 c192" and "lowest 1108.2 m · r0 c0"; no console or
+  page errors. Screenshot saved to
+  `docs/screenshots/moon-debug-site_01.png` (215,913 bytes).
+- An earlier identical run reported one transient "Uncaught" error with no
+  detail; it did not reproduce in two subsequent runs of the same flow
+  (including the full Mars->Moon->Mars switch sequence), so it is recorded
+  here as unresolved-but-unreproducible rather than claimed fixed.
+
 ## Target 2 - automated alignment tests (2026-11-15)
 
 - Added `scripts/check_moon_alignment.py`: prints a PASS/FAIL table and exits

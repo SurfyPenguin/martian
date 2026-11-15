@@ -6,6 +6,9 @@ let bodyManifest = null;
 let selectedBody = "mars";
 let regionLayer = null;
 let moonLayers = null;
+const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug") === "1";
+let debugLayerGroup = null;
+let debugSiteLayerGroup = null;
 let backdropLabel = null;
 const ZOOM_SLIDER_MIN_PERCENT = 100;
 const ZOOM_SLIDER_MAX_PERCENT = 300;
@@ -933,6 +936,80 @@ function activateSite(siteKey) {
       ? { color: "#68e1fd", weight: 2, opacity: 1 }
       : { color: "#9c8bd0", weight: 1, opacity: .7 });
   });
+  if (DEBUG_MODE && selectedBody === "moon") updateMoonDebugSite();
+}
+
+// Debug alignment aid (?debug=1, Moon only): crosshairs on region centers,
+// corner markers of every loaded site raster, a 1 km grid and the elevation
+// extremes of the active site.
+function setupMoonDebug(regions) {
+  if (!window.map.getPane("debug-pane")) {
+    const pane = window.map.createPane("debug-pane");
+    pane.style.zIndex = 470;
+  }
+  debugLayerGroup = L.layerGroup().addTo(window.map);
+  const crosshairArmM = 1000;
+  regions.features.forEach((feature) => {
+    const [x, y] = feature.properties.center_xy;
+    const options = {
+      color: "#ffd166", weight: 1, opacity: .9, interactive: false,
+      pane: "debug-pane",
+    };
+    L.polyline([[y - crosshairArmM, x], [y + crosshairArmM, x]], options)
+      .addTo(debugLayerGroup);
+    L.polyline([[y, x - crosshairArmM], [y, x + crosshairArmM]], options)
+      .addTo(debugLayerGroup);
+    L.marker([y, x], {
+      icon: L.divIcon({ className: "debug-label-anchor", iconSize: [0, 0] }),
+      interactive: false, pane: "debug-pane",
+    }).bindTooltip(`center ${feature.properties.name}`, {
+      permanent: true, direction: "right", offset: [6, 0],
+      className: "debug-label",
+    }).addTo(debugLayerGroup);
+  });
+  Object.entries(siteData).forEach(([, site]) => {
+    const [[min_y, min_x], [max_y, max_x]] = site.bounds;
+    [[min_y, min_x], [min_y, max_x], [max_y, min_x], [max_y, max_x]]
+      .forEach(([y, x]) => {
+        L.circleMarker([y, x], {
+          radius: 4, color: "#68e1fd", weight: 1, fillColor: "#68e1fd",
+          fillOpacity: .9, interactive: false, pane: "debug-pane",
+        }).addTo(debugLayerGroup);
+      });
+  });
+  debugSiteLayerGroup = L.layerGroup().addTo(window.map);
+  updateMoonDebugSite();
+}
+
+function updateMoonDebugSite() {
+  if (!debugSiteLayerGroup) return;
+  debugSiteLayerGroup.clearLayers();
+  const site = siteData[selectedSite];
+  if (!site) return;
+  const [[min_y, min_x], [max_y, max_x]] = site.bounds;
+  const gridOptions = {
+    color: "#7fd8a4", weight: 1, opacity: .45, interactive: false,
+    pane: "debug-pane",
+  };
+  for (let x = Math.ceil(min_x / 1000) * 1000; x <= max_x; x += 1000) {
+    L.polyline([[min_y, x], [max_y, x]], gridOptions).addTo(debugSiteLayerGroup);
+  }
+  for (let y = Math.ceil(min_y / 1000) * 1000; y <= max_y; y += 1000) {
+    L.polyline([[y, min_x], [y, max_x]], gridOptions).addTo(debugSiteLayerGroup);
+  }
+  const extremes = moonLayers?.sites?.[selectedSite]?.elevation_extremes;
+  if (!extremes) return;
+  [["highest", "#ff5c7a"], ["lowest", "#4fc3f7"]].forEach(([key, color]) => {
+    const extreme = extremes[key];
+    const point = gridToMap(site, extreme.row, extreme.col);
+    L.circleMarker(point, {
+      radius: 6, color, weight: 2, fillColor: color, fillOpacity: 1,
+      pane: "debug-pane",
+    }).bindTooltip(
+      `${key} ${extreme.value_m.toFixed(1)} m · r${extreme.row} c${extreme.col}`,
+      { permanent: true, direction: "top", className: "debug-label" },
+    ).addTo(debugSiteLayerGroup);
+  });
 }
 
 function flyToSite(siteKey) {
@@ -1045,6 +1122,8 @@ function clearBodyLayers() {
     layers.boundaries,
     layers.regions,
     backdropLabel,
+    debugLayerGroup,
+    debugSiteLayerGroup,
   ]) {
     if (layer && window.map.hasLayer(layer)) window.map.removeLayer(layer);
   }
@@ -1054,6 +1133,8 @@ function clearBodyLayers() {
   backdropLabel = null;
   regionLayer = null;
   moonLayers = null;
+  debugLayerGroup = null;
+  debugSiteLayerGroup = null;
   selectedSite = null;
   pendingSite = null;
 }
@@ -1112,6 +1193,7 @@ async function switchBody(body) {
   addSiteBoundaries();
   if (regions) addRegionBoundaries(regions);
   activateSite(defaultSite);
+  if (DEBUG_MODE && isMoon) setupMoonDebug(regions);
   window.map.fitBounds(backdropBounds, { padding: [24, 24] });
   document.getElementById("load-status").textContent =
     isMoon ? "Moon products and route grid loaded." : "Mars products and route grids loaded.";

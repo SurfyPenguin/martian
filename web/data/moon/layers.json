@@ -111,6 +111,27 @@
           "max_y": -9500.0
         },
         "image": "data/processed/moon/site_01/support.png"
+      },
+      "elevation_extremes": {
+        "raster": "data/processed/moon/site_01/elevation.tif",
+        "highest": {
+          "row": 297,
+          "col": 192,
+          "value_m": 1959.142578125,
+          "xy_m": [
+            -11575.0,
+            -12475.0
+          ]
+        },
+        "lowest": {
+          "row": 0,
+          "col": 0,
+          "value_m": 1108.2420654296875,
+          "xy_m": [
+            -13495.0,
+            -9505.0
+          ]
+        }
       }
     },
     "site_04": {
@@ -197,6 +218,27 @@
           "max_y": -4500.0
         },
         "image": "data/processed/moon/site_04/support.png"
+      },
+      "elevation_extremes": {
+        "raster": "data/processed/moon/site_04/elevation.tif",
+        "highest": {
+          "row": 159,
+          "col": 81,
+          "value_m": 1738.57275390625,
+          "xy_m": [
+            -2685.0,
+            -6095.0
+          ]
+        },
+        "lowest": {
+          "row": 184,
+          "col": 499,
+          "value_m": -831.5361938476562,
+          "xy_m": [
+            1495.0,
+            -6345.0
+          ]
+        }
       }
     },
     "site_07": {
@@ -283,6 +325,27 @@
           "max_y": -17510.0
         },
         "image": "data/processed/moon/site_07/support.png"
+      },
+      "elevation_extremes": {
+        "raster": "data/processed/moon/site_07/elevation.tif",
+        "highest": {
+          "row": 255,
+          "col": 255,
+          "value_m": 1648.5772705078125,
+          "xy_m": [
+            30055.0,
+            -20065.0
+          ]
+        },
+        "lowest": {
+          "row": 62,
+          "col": 499,
+          "value_m": 739.8484497070312,
+          "xy_m": [
+            32495.0,
+            -18135.0
+          ]
+        }
       }
     },
     "sl3": {
@@ -369,6 +432,27 @@
           "max_y": -3610.0
         },
         "image": "data/processed/moon/sl3/support.png"
+      },
+      "elevation_extremes": {
+        "raster": "data/processed/moon/sl3/elevation.tif",
+        "highest": {
+          "row": 0,
+          "col": 123,
+          "value_m": 1543.7176513671875,
+          "xy_m": [
+            -29975.0,
+            -3615.0
+          ]
+        },
+        "lowest": {
+          "row": 499,
+          "col": 295,
+          "value_m": 706.0104370117188,
+          "xy_m": [
+            -28255.0,
+            -8605.0
+          ]
+        }
       }
     }
   }
