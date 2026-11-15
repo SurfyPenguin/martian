@@ -49,3 +49,28 @@ plus the configured soft-clearance penalty. Neighbor traversal cost multiplies
 the destination cell cost by the 8-neighbor distance using the physical x/y
 cell sizes. Checkpoints that fall inside the selected margin are snapped to the
 nearest free cell and reported in the interface.
+
+## Lunar mode
+
+The source raster audit, GeoJSON region names, bounds, and data-support
+coverage are documented in `docs/MOON_DATA_NOTES.md`. Moon source rasters are
+in the git-ignored `data/raw/moon/` directory and must only be read with
+bounded or decimated windows. The supplied surface and slope files are 5 m
+rasters in south-polar stereographic meters; site outputs are 500 x 500 cells
+at 10 m. The map uses that projection with the configured lunar radius of
+1,737,400 m.
+
+Each processed site under `data/processed/moon/<site>/` contains elevation,
+supplied slope, derived roughness, the shared binary hazard mask, hillshade,
+LOLA support, grid metadata, and measured statistics. Browser route grids and
+metadata are under `web/data/moon/<site>/`; image paths in the grid metadata
+refer back to the processed site rasters. The roughness backdrop is a decimated
+304 x 304 PNG with a recorded 2nd-to-98th percentile display clip. The LOLA
+support layer shows recorded laser returns; it does not imply that
+interpolated 5 m surface pixels are direct measurements.
+
+The Moon hazard mask marks slope-limit, roughness-limit, and NoData cells.
+That mask supplies the hazard overlay and both Python and browser route costs.
+The lunar route cost grids use the same little-endian Float32, row-major format
+as Mars, with blocked cells stored as positive infinity and separate clearance
+arrays. Lunar dose is `null`, not a reused Mars estimate.

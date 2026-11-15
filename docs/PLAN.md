@@ -6,35 +6,47 @@ Solo build. Full challenge text is in `docs/CHALLENGE.md`. Progress is tracked i
 
 ## 1. Problem Statement
 
-Astronauts planning a Marswalk need a hyperlocal view that combines terrain,
-imagery, targets, route safety, and explicit mission assumptions. The current
-tool focuses on four clipped sites. Context data is read only by the
-decimated backdrop generator; the site pipeline uses the supplied processed
-rasters.
+Astronauts planning a surface excursion need a hyperlocal view that combines
+terrain, targets, route safety, and explicit mission assumptions. Mars mode
+focuses on four clipped sites in Gale Crater. Moon mode demonstrates the same
+planner on four south-polar raster windows, with distinct source limitations.
+Context data is read only by decimated backdrop generation; site processing
+uses bounded raster windows.
 
 **Goal:** Build a layered, interactive EVA planning map that combines supplied
-NASA-provided DEM and CTX inputs with derived hazard and route information. A
-lower-resolution surrounding backdrop provides context only; routing is limited
-to the four full-resolution sites.
+NASA data with derived hazard and route information. Lower-resolution
+surrounding backdrops provide context only; routing is limited to the four
+full-resolution sites for the selected body.
 
 ## 2. Solution: "Martian Map"
 
 A tablet-style web app used to inspect a site, compare terrain layers, and plan
 a route between placeholder science targets or manually added checkpoints.
+The body selector switches between Mars and a separately configured Moon
+south-pole demonstration mode.
 
 **Locations:** Four windows in Gale Crater: the supplied **Gale crater floor**
 and **Southern box**, plus fixed demo selections **Rough terrain box** and
 **Dune-edge box** clipped from supplied NASA rasters. Product IDs and
-acquisition dates were not included in this repository.
+acquisition dates were not included in this repository. Moon mode includes
+the GeoJSON-named **Connecting Ridge**, **Peak Near Shakleton**, and
+**Connecting Ridge Extension** regions, plus the unmatched `site_04` raster.
+The `site_04` raster is not presented as a named region because its footprint
+does not match the GeoJSON.
 
-**Science objective:** Demonstrate a low-risk EVA through three placeholder
+**Science objective:** Demonstrate route planning through three placeholder
 science targets in each roughly 5 x 5 km site. Mission coordinates must replace
-the placeholders before operational use.
+the placeholders before operational use. Moon mode is a planning prototype;
+it does not integrate lunar imagery, illumination, temperature, or radiation.
 
 **Scope (current MVP):**
 - Four selectable sites defined in `scripts/config.py` and listed in the
   generated `web/data/sites.json` manifest
+- Four Moon planning sites loaded from the generated
+  `web/data/moon/body.json` manifest
 - CTX imagery, elevation, slope, and slope/roughness hazard layers
+- Moon hillshade, slope, hazard, and LOLA return-support layers over a
+  lower-resolution LOLA roughness backdrop
 - Live A*, Dijkstra, or Weighted A* routes between manually placed checkpoints
   and back to habitat, with selectable Fastest, Safer, and Alternate options
 - Auto plan using three placeholder science targets
@@ -50,6 +62,9 @@ the placeholders before operational use.
 | Slope / roughness hazard | Derived topographic | Computed from the supplied DEM | Yes |
 | Route / targets | Navigation | A* output and placeholder coordinates | Yes |
 | Dose estimate | Safety planning | Labeled `scripts/config.py` assumption | Yes |
+| Lunar roughness | Regional context | NASA LOLA roughness product, 1,000 m/pixel | Moon mode |
+| Lunar elevation and slope | Site terrain | NASA-provided 5 m source rasters resampled to 10 m | Moon mode |
+| LOLA return support | Data coverage | NASA LOLA count product, 5 m/pixel | Moon mode |
 
 The supplied site rasters and lower-resolution context rasters are the real-data
 inputs in the current pipeline. Their product IDs and acquisition dates are not
@@ -72,18 +87,21 @@ available in this repository.
 ## 5. Architecture
 
 ```text
-data/raw/        context rasters (gitignored; read only by make_backdrop.py)
+data/raw/        source rasters (gitignored; windowed or decimated reads only)
 scripts/
   config.py      site paths, coordinates, and labeled assumptions
   inspect_data.py  input schema inspection
   make_backdrop.py decimated context imagery/hillshade -> web/data/
+  make_moon_site.py  bounded lunar site processing -> data/processed/moon/
+  check_moon.py, check_moon.js  lunar projection and route verification
   slope.py       DEM -> meter-scaled slope/roughness -> shared hazard mask/PNG
   route.py       Python A* reference -> processed routes and browser cost/
                  clearance grids under web/data/<site>/
 data/processed/  supplied inputs and per-site rasters, PNGs, route, stats, grid
+  moon/          bounded lunar outputs, PNGs, grids, and measured statistics
 web/
   index.html, app.js, geo.js, style.css   Leaflet app and shared projection
-  data/         low-resolution context images and bounds
+  data/         body manifests, low-resolution context images, bounds, and costs
 ```
 
 **Pipeline:** inspect inputs -> generate decimated backdrop context -> compute
@@ -105,6 +123,8 @@ UI:
 - Dose rate used only for a planning estimate
 
 These are not verified mission measurements or predictions.
+Moon uses a separate `null` dose rate: no Mars radiation estimate is reused.
+Moon walking speed, EVA duration, and slope limit are labeled assumptions.
 
 ## 7. Execution Plan
 
@@ -115,7 +135,8 @@ These are not verified mission measurements or predictions.
 | 3 | Run A* routes for all four sites and inspect safety margins |
 | 4 | Verify the Leaflet layers, site selector, safety sidebar, and checkpoints |
 | 5 | Run the full pipeline and browser smoke checks |
-| 6 | Prepare a demo and document remaining placeholders |
+| 6 | Process Moon sites with bounded reads and verify routing in Python and JavaScript |
+| 7 | Prepare a demo and document remaining placeholders |
 
 ## 8. Definition of Done
 
@@ -127,6 +148,8 @@ These are not verified mission measurements or predictions.
   recalculates the route and safety summary
 - README explains the real-data run in five steps or fewer
 - At least three data views are layered and assumptions/placeholders are explicit
+- Moon mode uses projection-meter map coordinates, labeled NASA products, and
+  no fabricated lunar dose or terrain for regions without elevation data
 
 ## 9. Risks and Fallbacks
 
