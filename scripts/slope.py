@@ -2,6 +2,8 @@
 
 import argparse
 import math
+import os
+import subprocess
 from pathlib import Path
 
 import numpy as np
@@ -157,6 +159,27 @@ def export_imagery(
     write_png(output, rgba_from_scalar(image, valid))
 
 
+def export_hillshade(dem_path: Path, output: Path) -> None:
+    environment = os.environ.copy()
+    environment["GDAL_PAM_ENABLED"] = "NO"
+    subprocess.run(
+        [
+            "gdaldem",
+            "hillshade",
+            "-q",
+            "-s",
+            "59157",
+            "-compute_edges",
+            "-of",
+            "PNG",
+            str(dem_path),
+            str(output),
+        ],
+        check=True,
+        env=environment,
+    )
+
+
 def process_site(site: str) -> None:
     config = site_config(site)
     output = site_output_dir(site)
@@ -223,6 +246,7 @@ def process_site(site: str) -> None:
         crs,
         output / "imagery.png",
     )
+    export_hillshade(config["dem_path"], output / "hillshade.png")
 
     print(
         f"{site}: cell size x={x_size_m:.3f} m, y={y_size_m:.3f} m; "

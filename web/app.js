@@ -1,10 +1,7 @@
 const layers = {};
 const siteLayers = {};
 const siteData = {};
-const SITE_OPTIONS = {
-  site1: "Gale crater floor",
-  site2: "Southern box",
-};
+let siteManifest = [];
 const ZOOM_SLIDER_MIN_PERCENT = 100;
 const ZOOM_SLIDER_MAX_PERCENT = 300;
 const ZOOM_SLIDER_STEP = 10;
@@ -577,7 +574,26 @@ function renderRoute(site) {
   choices.forEach((choice) => {
     const isSelected = choice.key === site.selectedRouteKey;
     choice.plan.legs.forEach((leg, index) => {
-      if (leg.unreachable) return;
+      if (leg.unreachable) {
+        const start = choice.plan.points[index];
+        const end = choice.plan.points[index + 1];
+        if (!start || !end) return;
+        L.polyline([
+          gridToMap(site, start.row, start.col),
+          gridToMap(site, end.row, end.col),
+        ], {
+          color: "#ef4444",
+          weight: isSelected ? 3 : 2,
+          opacity: isSelected ? .9 : .55,
+          dashArray: "7 7",
+          lineCap: "round",
+          bubblingMouseEvents: false,
+          pane: "route-pane",
+        }).bindTooltip(`${choice.name} · no safe path`)
+          .on("click", () => selectRoute(site, choice.key))
+          .addTo(route);
+        return;
+      }
       const positions = leg.path.map(([row, col]) => gridToMap(site, row, col));
       if (positions.length < 2) return;
       L.polyline(positions, {
@@ -687,9 +703,15 @@ function jumpToCheckpoint(checkpointId) {
 }
 
 function buildSiteLayers(siteKey, grid, routeGrid) {
+  const metadata = siteManifest.find((entry) => entry.key === siteKey);
+  if (!metadata || metadata.name !== grid.site_name) {
+    throw new Error(`${siteKey} manifest does not match its processed grid`);
+  }
   const site = {
     key: siteKey,
     name: grid.site_name,
+    descriptor: metadata.descriptor,
+    limitationsNote: metadata.limitations_note,
     grid,
     routeGrid,
     safetyMarginCells: routeGrid.parameters.safety_margin_cells,
@@ -775,7 +797,14 @@ function updateSiteSummary(site) {
   document.getElementById("load-status").textContent =
     `Live ${site.algorithm === "weighted" ? "Weighted A*" : site.algorithm === "astar" ? "A*" : "Dijkstra"} route uses the shared hazard mask. Habitat and science locations are placeholders.`;
   document.getElementById("site-name").textContent = grid.site_name;
-  document.getElementById("site-region").textContent = "Real NASA data";
+  document.getElementById("site-region").textContent = site.descriptor;
+  document.getElementById("site-banner-copy").textContent =
+    `Real NASA DEM + CTX · surrounding map is real NASA data at lower resolution · `
+    + `${site.descriptor} · placeholder habitat and targets · dose, radiation and `
+    + "walking speed are assumptions";
+  const limitationsNote = document.getElementById("site-limitations-note");
+  limitationsNote.hidden = !site.limitationsNote;
+  limitationsNote.textContent = site.limitationsNote;
   document.getElementById("site-select").value = site.key;
   document.getElementById("slope-limit").textContent =
     `${parameters.max_walkable_slope_deg}°+`;
@@ -912,7 +941,7 @@ async function fetchJson(url) {
 
 function addSiteBoundaries() {
   const boundaries = L.layerGroup();
-  Object.keys(SITE_OPTIONS).forEach((siteKey) => {
+  siteManifest.forEach(({ key: siteKey }) => {
     const site = siteData[siteKey];
     const boundary = L.rectangle(site.bounds, {
       color: "#9c8bd0",
@@ -971,7 +1000,25 @@ function addBackdrop(backdrop) {
 }
 
 async function loadPlanner() {
-  const backdrop = await fetchJson("data/backdrop.json");
+  const [backdrop, manifest] = await Promise.all([
+    fetchJson("data/backdrop.json"),
+    fetchJson("data/sites.json"),
+  ]);
+  if (!Array.isArray(manifest.sites) || manifest.sites.length === 0) {
+    throw new Error("Site manifest does not contain any sites");
+  }
+  siteManifest = manifest.sites;
+  const siteSelect = document.getElementById("site-select");
+  siteSelect.replaceChildren(...siteManifest.map((site) => {
+    const option = document.createElement("option");
+    option.value = site.key;
+    option.textContent = site.name;
+    return option;
+  }));
+  if (!siteManifest.some((site) => site.key === manifest.default_site)) {
+    throw new Error("Default site is missing from the site manifest");
+  }
+  siteSelect.value = manifest.default_site;
   setGeoReference(backdrop);
   window.map = L.map("map", {
     crs: L.CRS.Simple,
@@ -1003,7 +1050,6 @@ async function loadPlanner() {
   window.map.setMaxBounds(paddedBackdropBounds);
   window.map.setMinZoom(backdropMinZoom);
 
-  const siteSelect = document.getElementById("site-select");
   siteSelect.addEventListener("change", () => flyToSite(siteSelect.value));
   const routeChip = document.querySelector(".map-route-chip");
   L.DomEvent.disableClickPropagation(routeChip);
@@ -1110,7 +1156,7 @@ async function loadPlanner() {
       gridLabel: cell.inside ? `GRID ${cell.row}, ${cell.col}` : "SURROUNDING AREA",
     });
   });
-  await Promise.all(Object.keys(SITE_OPTIONS).map((site) => loadSiteData(site)));
+  await Promise.all(siteManifest.map(({ key }) => loadSiteData(key)));
   addSiteBoundaries();
   activateSite(siteSelect.value);
   window.map.fitBounds(backdropBounds, { padding: [24, 24] });

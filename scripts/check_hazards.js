@@ -251,6 +251,8 @@ function checkSite(site, random) {
 
 checkSyntheticWall();
 const random = seededRandom(20261115);
-checkSite("site1", random);
-checkSite("site2", random);
+const manifest = JSON.parse(
+  fs.readFileSync(path.join(root, "web", "data", "sites.json"), "utf8"),
+);
+for (const { key } of manifest.sites) checkSite(key, random);
 console.log("All exported auto and random routes are hazard- and margin-free.");

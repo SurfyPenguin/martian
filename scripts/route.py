@@ -7,6 +7,7 @@ import math
 
 import numpy as np
 import rasterio
+from scipy import ndimage
 
 from config import (
     CLEARANCE_COST_RADIUS_CELLS,
@@ -163,6 +164,88 @@ def build_walkable_mask(
     if safety_margin_cells < 0:
         raise ValueError("Safety margin must be non-negative")
     return np.isfinite(costs) & (clearance_cells > safety_margin_cells)
+
+
+def passability_metrics(walkable: np.ndarray) -> tuple[float, int]:
+    """Measure the largest passable component and narrow links between large regions."""
+    structure = ndimage.generate_binary_structure(2, 1)
+    labels, component_count = ndimage.label(walkable, structure=structure)
+    if component_count == 0:
+        return 0.0, 0
+    sizes = np.bincount(labels.ravel(), minlength=component_count + 1)
+    sizes[0] = 0
+    largest_fraction = float(sizes.max() / walkable.size)
+
+    core = walkable & (ndimage.distance_transform_edt(walkable) > 2)
+    core_labels, core_count = ndimage.label(core, structure=structure)
+    if core_count < 2:
+        return largest_fraction, 0
+    core_sizes = np.bincount(core_labels.ravel(), minlength=core_count + 1)
+    large_core = core_sizes >= max(100, math.ceil(walkable.size * 0.01))
+    narrow_labels, narrow_count = ndimage.label(walkable & ~core, structure=structure)
+    connected_pairs = []
+    rows, cols = walkable.shape
+    for row_delta, col_delta in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        row_start = max(0, -row_delta)
+        row_end = min(rows, rows - row_delta)
+        col_start = max(0, -col_delta)
+        col_end = min(cols, cols - col_delta)
+        narrow_side = narrow_labels[row_start:row_end, col_start:col_end]
+        core_side = core_labels[
+            row_start + row_delta:row_end + row_delta,
+            col_start + col_delta:col_end + col_delta,
+        ]
+        touching = (
+            (narrow_side > 0)
+            & (core_side > 0)
+            & large_core[core_side]
+        )
+        if np.any(touching):
+            connected_pairs.append(
+                np.column_stack((narrow_side[touching], core_side[touching]))
+            )
+    if not connected_pairs:
+        return largest_fraction, 0
+    pairs = np.unique(np.concatenate(connected_pairs), axis=0)
+    corridor_core_count = np.zeros(narrow_count + 1, dtype="uint32")
+    np.add.at(corridor_core_count, pairs[:, 0], 1)
+    return largest_fraction, int(np.count_nonzero(corridor_core_count[1:] >= 2))
+
+
+def write_site_manifest() -> None:
+    sites = []
+    for key, config in SITES.items():
+        output = PROJECT_ROOT / "data" / "processed" / key
+        stats_path = output / "stats.json"
+        grid_path = output / "grid.json"
+        stats = json.loads(stats_path.read_text()) if stats_path.is_file() else {}
+        grid = json.loads(grid_path.read_text()) if grid_path.is_file() else {}
+        hazard_fraction = stats.get("hazard_fraction")
+        chokepoints = stats.get("chokepoints")
+        largest_fraction = stats.get("largest_passable_component_fraction")
+        descriptor = "Processed NASA terrain data"
+        if hazard_fraction is not None and chokepoints is not None:
+            chokepoint_label = "chokepoint" if chokepoints == 1 else "chokepoints"
+            descriptor = (
+                f"{hazard_fraction:.0%} hazard, "
+                f"{chokepoints} {chokepoint_label}"
+            )
+            if largest_fraction is not None:
+                descriptor += f", {largest_fraction:.0%} largest passable component"
+        sites.append(
+            {
+                "key": key,
+                "name": config["name"],
+                "bounds": grid.get("geo_reference", {}).get(
+                    "bounds", config["bounds"]
+                ),
+                "descriptor": descriptor,
+                "limitations_note": config.get("limitations_note", ""),
+            }
+        )
+    path = PROJECT_ROOT / "web" / "data" / "sites.json"
+    manifest = {"default_site": next(iter(SITES)), "sites": sites}
+    path.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 def astar(
@@ -442,6 +525,7 @@ def process_site(site: str) -> None:
             "distance_km": round(distance, 3),
             "time_h": round(distance / WALKING_SPEED_KMH, 3),
         })
+    largest_component_fraction, chokepoints = passability_metrics(walkable)
     stats = {
         "data_status": "REAL - route derived from supplied NASA DEM",
         "distance_km": round(distance_km, 3),
@@ -453,6 +537,8 @@ def process_site(site: str) -> None:
         "max_roughness_m": MAX_ROUGHNESS_M,
         "hazard_cells": int(hazard_mask.sum()),
         "hazard_fraction": round(float(hazard_mask.mean()), 6),
+        "largest_passable_component_fraction": round(largest_component_fraction, 6),
+        "chokepoints": chokepoints,
         "safety_margin_cells": SAFETY_MARGIN_CELLS,
         "minimum_clearance_m": round(
             min(float(clearance_meters[row, col]) for row, col in route_pixels),
@@ -512,6 +598,7 @@ def process_site(site: str) -> None:
                        "coordinate_system": "grid row,col cell centers"},
         "features": features,
     }, indent=2) + "\n")
+    write_site_manifest()
     eva_status = "within" if time_h <= EVA_HOURS else "over"
     print(
         f"{site}: route {distance_km:.3f} km, {time_h:.3f} h "

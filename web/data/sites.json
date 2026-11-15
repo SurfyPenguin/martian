@@ -1,0 +1,53 @@
+{
+  "default_site": "site1",
+  "sites": [
+    {
+      "key": "site1",
+      "name": "Gale crater floor",
+      "bounds": {
+        "min_lon": 137.3837293188735,
+        "min_lat": -4.629457819381081,
+        "max_lon": 137.46856731887348,
+        "max_lat": -4.5449578193810805
+      },
+      "descriptor": "2% hazard, 0 chokepoints, 96% largest passable component",
+      "limitations_note": ""
+    },
+    {
+      "key": "site2",
+      "name": "Southern box",
+      "bounds": {
+        "min_lon": 137.35759675194828,
+        "min_lat": -4.842365146641901,
+        "max_lon": 137.44243475194827,
+        "max_lat": -4.757696146641901
+      },
+      "descriptor": "36% hazard, 1 chokepoint, 21% largest passable component",
+      "limitations_note": ""
+    },
+    {
+      "key": "site3",
+      "name": "Rough terrain box",
+      "bounds": {
+        "min_lon": 137.3376,
+        "min_lat": -4.742369,
+        "max_lon": 137.422438,
+        "max_lat": -4.6577
+      },
+      "descriptor": "7% hazard, 1 chokepoint, 83% largest passable component",
+      "limitations_note": "Model uses slope and roughness only. It cannot see loose sand or sharp embedded rocks, so real difficulty may be higher."
+    },
+    {
+      "key": "site4",
+      "name": "Dune-edge box",
+      "bounds": {
+        "min_lon": 137.3776,
+        "min_lat": -4.922369,
+        "max_lon": 137.462438,
+        "max_lat": -4.8377
+      },
+      "descriptor": "47% hazard, 0 chokepoints, 5% largest passable component",
+      "limitations_note": "Model uses slope and roughness only. It cannot see loose sand or sharp embedded rocks, so real difficulty may be higher."
+    }
+  ]
+}

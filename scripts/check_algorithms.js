@@ -6,6 +6,9 @@ const RoutePlanner = require("../web/route.js");
 
 const root = path.resolve(__dirname, "..");
 const safetyMarginCells = 2;
+const manifest = JSON.parse(
+  fs.readFileSync(path.join(root, "web", "data", "sites.json"), "utf8"),
+);
 
 function toArrayBuffer(bytes) {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
@@ -114,6 +117,5 @@ function verifySite(site, random) {
 
 console.log("Site   Pairs   A* avg ms   Dijkstra avg ms   A* explored   Dijkstra explored   Max cost delta");
 const random = seededRandom(20261116);
-verifySite("site1", random);
-verifySite("site2", random);
-console.log("A* and Dijkstra costs agree within 0.1% on all 40 pairs.");
+for (const { key } of manifest.sites) verifySite(key, random);
+console.log(`A* and Dijkstra costs agree within 0.1% on all ${20 * manifest.sites.length} pairs.`);

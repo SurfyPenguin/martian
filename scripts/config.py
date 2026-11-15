@@ -53,6 +53,60 @@ SITES = {
             {"lat": -4.79495051, "lon": 137.41347807},
         ],
     },
+    "site3": {
+        "name": "Rough terrain box",
+        "provenance": (
+            "NASA-provided clipped DEM and CTX input; product ID and acquisition "
+            "date were not supplied."
+        ),
+        "dem_path": PROCESSED_DATA_DIR / "site3_dem.tif",
+        "imagery_path": PROCESSED_DATA_DIR / "site3_imagery.tif",
+        # Nominal requested bounds; grid.json contains authoritative raster extents.
+        "bounds": {
+            "min_lon": 137.3376,
+            "min_lat": -4.7423,
+            "max_lon": 137.4224,
+            "max_lat": -4.6577,
+        },
+        "limitations_note": (
+            "Model uses slope and roughness only. It cannot see loose sand or "
+            "sharp embedded rocks, so real difficulty may be higher."
+        ),
+        # PLACEHOLDER coordinates: demo choices, not mission-validated.
+        "habitat": {"lat": -4.6993585, "lon": 137.3792585},
+        "targets": [
+            {"lat": -4.7404255, "lon": 137.3390365},
+            {"lat": -4.6633615, "lon": 137.3691185},
+            {"lat": -4.7301165, "lon": 137.4215085},
+        ],
+    },
+    "site4": {
+        "name": "Dune-edge box",
+        "provenance": (
+            "NASA-provided clipped DEM and CTX input; product ID and acquisition "
+            "date were not supplied."
+        ),
+        "dem_path": PROCESSED_DATA_DIR / "site4_dem.tif",
+        "imagery_path": PROCESSED_DATA_DIR / "site4_imagery.tif",
+        # Nominal requested bounds; grid.json contains authoritative raster extents.
+        "bounds": {
+            "min_lon": 137.3776,
+            "min_lat": -4.9223,
+            "max_lon": 137.4624,
+            "max_lat": -4.8377,
+        },
+        "limitations_note": (
+            "Model uses slope and roughness only. It cannot see loose sand or "
+            "sharp embedded rocks, so real difficulty may be higher."
+        ),
+        # PLACEHOLDER coordinates: demo choices, not mission-validated.
+        "habitat": {"lat": -4.8528255, "lon": 137.3900215},
+        "targets": [
+            {"lat": -4.8744575, "lon": 137.3800505},
+            {"lat": -4.8384605, "lon": 137.4104705},
+            {"lat": -4.8418405, "lon": 137.3795435},
+        ],
+    },
 }
 
 # ASSUMPTION: maximum slope considered walkable by a suited astronaut.

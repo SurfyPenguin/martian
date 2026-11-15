@@ -9,6 +9,8 @@
   "max_roughness_m": 15.0,
   "hazard_cells": 4437,
   "hazard_fraction": 0.017677,
+  "largest_passable_component_fraction": 0.960781,
+  "chokepoints": 0,
   "safety_margin_cells": 2,
   "minimum_clearance_m": 63.937,
   "cell_size_m": {

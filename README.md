@@ -1,7 +1,7 @@
 # Martian Map
 
 Martian Map is an interactive map prototype for planning a Marswalk in
-two sites in Gale Crater. It was built for the 2026 NASA Space Apps Challenge
+four sites in Gale Crater. It was built for the 2026 NASA Space Apps Challenge
 and its challenge "Interplanetary Survival Guide: Martian Map."
 
 The map combines NASA-provided CTX imagery and elevation data with derived
@@ -42,6 +42,10 @@ python scripts/slope.py --site site1
 python scripts/route.py --site site1
 python scripts/slope.py --site site2
 python scripts/route.py --site site2
+python scripts/slope.py --site site3
+python scripts/route.py --site site3
+python scripts/slope.py --site site4
+python scripts/route.py --site site4
 ```
 
 To regenerate the low-resolution surrounding map, install the GDAL command-line
@@ -66,10 +70,11 @@ demo without them.
 
 ## Use the map
 
-Choose **Gale crater floor** or **Southern box** from the site selector. Use
+Choose a site from the data-driven selector: **Gale crater floor**,
+**Southern box**, **Rough terrain box**, or **Dune-edge box**. Use
 the layer controls to show elevation, CTX imagery, slope, hazards, routes, or
 targets. The surrounding map is lower-resolution context only; route planning
-is available only inside the two site areas.
+is available only inside the four site areas.
 
 Select **Add checkpoint**, then click inside the active site to add a stop.
 Drag stops to move them, or use the checkpoint controls to undo, clear, or
@@ -92,8 +97,8 @@ official NASA product.
 
 | Map information | What it shows | Source and status |
 |---|---|---|
-| CTX imagery | Optical surface imagery for each site | NASA-provided imagery in `data/processed/site1_imagery.tif` and `site2_imagery.tif`, resampled to the site grid |
-| DEM elevation | Surface elevation in meters | NASA-provided digital elevation models in `data/processed/site1_dem.tif` and `site2_dem.tif`; the processed site grids are about 10 m per cell |
+| CTX imagery | Optical surface imagery for each site | NASA-provided imagery in `data/processed/site1_imagery.tif` through `site4_imagery.tif`, resampled and scaled per site |
+| DEM elevation | Surface elevation in meters | NASA-provided digital elevation models in `data/processed/site1_dem.tif` through `site4_dem.tif`; the processed site grids are about 10 m per cell |
 | Slope and roughness hazards | Areas blocked for route planning | Calculated from the DEM; not a separate NASA measurement |
 | Surrounding map | Lower-resolution CTX imagery and DEM hillshade | Derived from NASA source rasters; context only, with no route data |
 | Routes and science targets | Candidate paths between the habitat and stops | Routes are calculated by the planner; habitat and target coordinates are placeholders |
@@ -123,7 +128,13 @@ Run the hazard and algorithm checks with:
 python scripts/check_hazards.py
 node scripts/check_hazards.js
 node scripts/check_algorithms.js
+python scripts/check_site_edge_cases.py
 ```
+
+The endpoint edge-case script exercises hazard/margin snapping, disconnected
+pockets, and over-limit plans for site3 and site4. Results for the four-site
+hazard and algorithm checks are recorded in
+[`docs/SITE_STRESS_TESTS.md`](docs/SITE_STRESS_TESTS.md).
 
 ## Project and data references
 

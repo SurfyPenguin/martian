@@ -1,4 +1,4 @@
-"""Verify exported hazard masks and every routed cell on both sites."""
+"""Verify exported hazard masks and every routed cell on all configured sites."""
 
 import json
 import random
