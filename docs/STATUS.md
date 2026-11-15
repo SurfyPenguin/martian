@@ -1,7 +1,8 @@
 # Status (update after every task)
 
 ## Scope (MVP, solo, ~1 day)
-- Two supplied, clipped sites in Gale Crater: Gale crater floor and Southern box
+- Four NASA-data sites in Gale Crater: Gale crater floor, Southern box,
+  Rough terrain box, and Dune-edge box
 - CTX imagery, elevation, slope/roughness hazard, route, and target layers
 - Up to three hazard-safe route options between three placeholder science targets
   per site, with an adjustable algorithm and safety margin
@@ -81,7 +82,7 @@
   overview assets are under 3 MB, share the DEM footprint, and are about 18 m/px
 - Added a shared Mars equirectangular projection for backdrops, site overlays,
   raster-cell centers, routes, targets, coordinate readout, and scale bar
-- Kept both sites' imagery, terrain, slope, hazard, route, and target layers
+- Kept all four sites' imagery, terrain, slope, hazard, route, and target layers
   loaded and positioned; added named site outlines and dropdown/outline fly-to
   switching with the safety summary and checkpoints updated after movement
 - Added the low-resolution, no-route-data context label and clarified that the
@@ -103,7 +104,7 @@
   moves cannot cut blocked corners
 - Added a labeled, adjustable two-cell safety margin, six-cell soft clearance
   penalty, endpoint snapping, and cell-center route/overlay verification
-- Verified both sites' auto routes plus 20 random three-checkpoint sets per site
+- Verified all four sites' auto routes plus 20 random three-checkpoint sets per site
   in Python and JavaScript with Bresenham cell checks; synthetic diagonal-gap
   tests confirm corner cutting is blocked
 - Added A* (octile), Dijkstra, and Weighted A* (default epsilon 1.5) choices,
@@ -130,6 +131,23 @@
   dataset limits, assumptions, verification commands, and remaining work
 - Standardized project title references to "Martian Map" across documentation,
   repository agent guidance, and the backdrop generator's temporary directory prefix
+- Added the fixed Rough terrain box and Dune-edge box sites from windowed NASA
+  DEM/CTX clips, without scanning or loading the large source rasters; both
+  retain the requested centers and have zero DEM NoData and full CTX coverage
+- Recorded per-site elevation, imagery, hazard, passability, chokepoint, route,
+  and A*/Dijkstra metrics with small CTX/hillshade previews in
+  `docs/SITE_STRESS_TESTS.md`; site3's automatic route is 20.545 km / 6.848 h,
+  while site4's is 10.018 km / 3.339 h
+- Made site selection and site summaries data-driven from the generated
+  four-site manifest, added the two new 5 x 5 km overlays and placeholder
+  targets, and showed the slope/roughness limitation note for the new sites
+- Verified all four sites with the Python and browser hazard checks, 80
+  A*/Dijkstra comparisons, and the site3/site4 endpoint and EVA-limit checks;
+  a headless browser test confirmed disconnected site4 legs show NO SAFE PATH
+  and red dashed connectors without console errors
+- Measured site3/4 processing and verification memory; the largest final
+  verification RSS was 296,728 KB. Generated outputs remain under 5 MB, and
+  no raw inputs or GDAL sidecars are included
 
 ## In progress
 (nothing)

@@ -17,15 +17,16 @@ against the current code before treating them as open issues.
 ## Project summary
 
 Martian Map is a NASA Space Apps Challenge 2026 prototype for planning
-candidate EVAs at two supplied sites in Gale Crater: **Gale crater floor** and
-**Southern box**. The project title is "Martian Map."
-Routing is limited to the two roughly 5 x 5 km site areas; the surrounding
-map is lower-resolution context only.
+candidate EVAs at four sites in Gale Crater: **Gale crater floor**,
+**Southern box**, **Rough terrain box**, and **Dune-edge box**. The project title
+is "Martian Map."
+Routing is limited to the four roughly 5 x 5 km site areas; the surrounding
+map is lower-resolution NASA-data context only.
 
 The browser app visualizes supplied NASA CTX imagery and digital elevation
 models (DEMs). Slope, roughness, hazard, and route layers are derived or
-computed from those inputs. Both site overlays stay loaded in one Mars map
-projection. The site selector and site outlines fly between the two areas.
+computed from those inputs. All four site overlays stay loaded in one Mars map
+projection. The site selector and site outlines fly between all four areas.
 
 Users can restore the automatic plan or add, move, remove, undo, and clear
 checkpoints. The browser offers A*, Dijkstra, and Weighted A*, and selectable
@@ -38,20 +39,12 @@ radiation or weather data and does not provide mineral identifications.
 
 ## Current repository state
 
-The preceding handoff refresh started with local `main` at `c180c43`, 15
-commits ahead of the locally recorded `origin/main` at `75a12ae`. It was
-committed as `1b0e232` on `feat/handoff-context` and fast-forwarded into local
-`main`; it was not pushed. The remote is configured over SSH, but SSH
-authentication failed in this environment, and the GitHub CLI is not installed.
-Do not assume remote branches or PR state are current, and do not push directly
-to `main`.
-
-At the start of the current title correction, local `main` was at `1b0e232`,
-16 commits ahead of the locally recorded `origin/main`. The title correction
-was made on `docs/martian-map-title`, created from local `main`. Check
-`git status --short --branch`, `git log --oneline -8`, and
-`git worktree list --porcelain` before switching branches or merging. Preserve
-uncommitted and untracked user files.
+The fixed site3/site4 work is on branch `feat/landmark-sites`, based on the
+current local project history. Check `git status --short --branch`,
+`git log --oneline -8`, and `git worktree list --porcelain` before switching
+branches or merging. Preserve uncommitted and untracked user files. Do not
+assume remote branches or PR state are current, and do not push directly to
+`main`.
 
 ## Data and processing
 
@@ -60,11 +53,18 @@ product IDs and acquisition dates were not supplied. Do not invent provenance.
 The clipped site inputs are in `data/processed/`; the schema and bounds are
 documented in `docs/DATA_SCHEMA.md`.
 
+Site3 and site4 use the requested fixed centers and windowed DEM/CTX clips.
+Their measured site properties, per-site previews, route checks, edge cases,
+and memory measurements are recorded in `docs/SITE_STRESS_TESTS.md`. Do not
+run a scan over the large source DEM; the source inputs must only be read
+windowed or decimated.
+
 The local, git-ignored `data/raw/` directory contains large source files,
 including `gale_ctx_blockadj_dd.tif` and `gale_dem_smg_1m.tif`. They are not
 part of a clean clone. At the last local check, these source rasters were
-about 1.8 GB and 5.8 GB respectively. Only `scripts/make_backdrop.py` may read
-`data/raw/`. It uses decimated reads and GDAL command-line tools; never load a
+about 1.8 GB and 5.8 GB respectively. `scripts/make_backdrop.py` reads them
+with decimated reads; fixed site inputs may be cut only with explicit
+windowed `gdal_translate -projwin -tr -r average` commands. Never scan or load a
 full source raster into memory. The small generated backdrop assets are under
 `web/data/`.
 
@@ -89,9 +89,10 @@ These are planning assumptions, not validated mission limits or measurements.
 Do not relax thresholds to make a route succeed. Preserve the placeholder
 labels until verified mission coordinates are provided.
 
-The latest recorded automatic route outputs are 9.810 km / 3.270 h for site1
-and 18.619 km / 6.206 h for site2. Site2 is over the current four-hour
-assumption; do not change assumptions to make it show as within the limit.
+The latest recorded automatic route outputs are 9.81 km / 3.27 h for site1,
+18.619 km / 6.206 h for site2, 20.545 km / 6.848 h for site3, and 10.018 km /
+3.339 h for site4. Sites2 and 3 are over the current four-hour assumption; do
+not change assumptions to make them show as within the limit.
 Re-run the route checks if inputs or settings change.
 
 ## Run and verify
@@ -113,6 +114,10 @@ python scripts/slope.py --site site1
 python scripts/route.py --site site1
 python scripts/slope.py --site site2
 python scripts/route.py --site site2
+python scripts/slope.py --site site3
+python scripts/route.py --site site3
+python scripts/slope.py --site site4
+python scripts/route.py --site site4
 ```
 
 Run the hazard and algorithm checks with:
@@ -125,9 +130,13 @@ node scripts/check_algorithms.js
 
 The latest recorded verification covered auto routes and 20 random
 checkpoint sets per site, checked cells along route segments, and confirmed
-that A* and Dijkstra costs agreed within 0.1% for 20 pairs per site. Repeat
-relevant checks after changing route or map code. For UI changes, run the page
-in a browser and check both sites and a mobile viewport.
+that A* and Dijkstra costs agreed within 0.1% for 20 pairs per site. A browser
+check also verified that a disconnected site4 checkpoint produces `NO SAFE
+PATH` and rendered red dashed legs without console errors. The fixed site
+windows, metrics, placeholder edge cases, and processing memory are recorded
+in `docs/SITE_STRESS_TESTS.md`; image previews are in `docs/site_previews/`.
+Repeat relevant checks after changing route or map code. For UI changes, run
+the page in a browser and check all sites and a mobile viewport.
 
 ## Rules for future work
 

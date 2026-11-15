@@ -8,31 +8,32 @@ Solo build. Full challenge text is in `docs/CHALLENGE.md`. Progress is tracked i
 
 Astronauts planning a Marswalk need a hyperlocal view that combines terrain,
 imagery, targets, route safety, and explicit mission assumptions. The current
-tool focuses on two supplied, clipped sites. Context data is read only by the
+tool focuses on four clipped sites. Context data is read only by the
 decimated backdrop generator; the site pipeline uses the supplied processed
 rasters.
 
 **Goal:** Build a layered, interactive EVA planning map that combines supplied
 NASA-provided DEM and CTX inputs with derived hazard and route information. A
 lower-resolution surrounding backdrop provides context only; routing is limited
-to the two full-resolution sites.
+to the four full-resolution sites.
 
 ## 2. Solution: "Martian Map"
 
 A tablet-style web app used to inspect a site, compare terrain layers, and plan
 a route between placeholder science targets or manually added checkpoints.
 
-**Locations:** Two supplied sites in Gale Crater:
-**Gale crater floor** and **Southern box**. The inputs are treated as
-NASA-provided clipped files, but product IDs and acquisition dates were not
-included in this repository.
+**Locations:** Four windows in Gale Crater: the supplied **Gale crater floor**
+and **Southern box**, plus fixed demo selections **Rough terrain box** and
+**Dune-edge box** clipped from supplied NASA rasters. Product IDs and
+acquisition dates were not included in this repository.
 
 **Science objective:** Demonstrate a low-risk EVA through three placeholder
 science targets in each roughly 5 x 5 km site. Mission coordinates must replace
 the placeholders before operational use.
 
 **Scope (current MVP):**
-- Two selectable sites
+- Four selectable sites defined in `scripts/config.py` and listed in the
+  generated `web/data/sites.json` manifest
 - CTX imagery, elevation, slope, and slope/roughness hazard layers
 - Live A*, Dijkstra, or Weighted A* routes between manually placed checkpoints
   and back to habitat, with selectable Fastest, Safer, and Alternate options
@@ -88,7 +89,7 @@ web/
 **Pipeline:** inspect inputs -> generate decimated backdrop context -> compute
 meter-scaled slope and 5x5 roughness -> export one shared hazard mask and
 clearance grids -> run the Python reference route -> export aligned PNG,
-GeoJSON, stats, route metadata, and browser cost grids -> Leaflet loads both
+GeoJSON, stats, route metadata, and browser cost grids -> Leaflet loads all
 sites and route grids in the shared Mars map projection.
 
 ## 6. Assumptions
@@ -111,7 +112,7 @@ These are not verified mission measurements or predictions.
 |---|---|
 | 1 | Validate the supplied site rasters and coordinate placeholders |
 | 2 | Process slope, roughness, hazard, and aligned browser overlays |
-| 3 | Run A* routes for both sites and inspect safety margins |
+| 3 | Run A* routes for all four sites and inspect safety margins |
 | 4 | Verify the Leaflet layers, site selector, safety sidebar, and checkpoints |
 | 5 | Run the full pipeline and browser smoke checks |
 | 6 | Prepare a demo and document remaining placeholders |
@@ -119,9 +120,9 @@ These are not verified mission measurements or predictions.
 ## 8. Definition of Done
 
 - `python scripts/inspect_data.py` documents the supplied inputs
-- `python scripts/slope.py --site site1` and `python scripts/route.py --site site1`
-  produce that site's outputs; repeat for site2
-- `scripts/route.py` writes browser route-cost grids and metadata for both sites
+- `python scripts/slope.py --site <site>` and `python scripts/route.py --site <site>`
+  produce outputs for site1 through site4
+- `scripts/route.py` writes browser route-cost grids and metadata for all sites
 - `web/index.html` shows aligned layers, allows manual checkpoint editing, and
   recalculates the route and safety summary
 - README explains the real-data run in five steps or fewer

@@ -8,8 +8,25 @@ These files are the clipped real inputs used by the site pipeline. The site coor
 | `data/processed/site1_imagery.tif` | 1003 x 1006 | 1 | uint8 | `ESRI:104971` | `None` | `(137.3836794254, -4.6295525992, 137.4685385434, -4.5449465402)` | `(8.4353e-05, 8.4353e-05)` | 653,681 bytes |
 | `data/processed/site2_dem.tif` | 501 x 502 | 1 | float32 | `ESRI:104905` | `-3.4028230607370965e+38` | `(137.3575967519, -4.8423651466, 137.4424347519, -4.7576961466)` | `(0.000169, 0.000169)` | 813,305 bytes |
 | `data/processed/site2_imagery.tif` | 1004 x 1007 | 1 | uint8 | `ESRI:104971` | `None` | `(137.3575299954, -4.8423752182, 137.4424734664, -4.7576848062)` | `(8.4353e-05, 8.4353e-05)` | 778,473 bytes |
+| `data/processed/site3_dem.tif` | 501 x 502 | 1 | float32 | `ESRI:104905` | `-3.4028230607370965e+38` | `(137.3376000000, -4.7423690000, 137.4224380000, -4.6577000000)` | `(0.000169, 0.000169)` | 1,007,295 bytes |
+| `data/processed/site3_imagery.tif` | 501 x 502 | 1 | uint8 | `ESRI:104971` | `None` | `(137.3376000000, -4.7423690000, 137.4224380000, -4.6577000000)` | `(0.000169, 0.000169)` | 252,404 bytes |
+| `data/processed/site4_dem.tif` | 501 x 502 | 1 | float32 | `ESRI:104905` | `-3.4028230607370965e+38` | `(137.3776000000, -4.9223690000, 137.4624380000, -4.8377000000)` | `(0.000169, 0.000169)` | 1,007,295 bytes |
+| `data/processed/site4_imagery.tif` | 501 x 502 | 1 | uint8 | `ESRI:104971` | `None` | `(137.3776000000, -4.9223690000, 137.4624380000, -4.8377000000)` | `(0.000169, 0.000169)` | 252,404 bytes |
 
 DEM values are elevation in meters. DEM NoData is treated as impassable; slope is never computed across invalid neighborhoods. Imagery is CTX single-band raster data and is resampled to each site's DEM grid for the browser overlay.
+
+Site3 and site4 are fixed demo windows clipped from the supplied source rasters
+with windowed `gdal_translate -projwin W N E S -tr 0.000169 0.000169 -r
+average` commands and resampled to about 10 m per pixel. The requested bounds
+are site3 `(137.3376, -4.6577, 137.4224, -4.7423)` and site4
+`(137.3776, -4.8377, 137.4624, -4.9223)`, in W, N, E, S order. Their final CTX
+rasters are linearly scaled from each window's own valid minimum and maximum.
+The source CTX retains CRS `ESRI:104971`, while the DEM uses `ESRI:104905`;
+`scripts/slope.py` explicitly reprojects the CTX band to the DEM transform
+before browser export. Matching numeric bounds and dimensions do not make those
+CRS definitions interchangeable. The generated `web/data/sites.json` manifest
+lists each configured site, its processed bounds, and measured
+hazard/passability summary.
 
 ## Browser route-cost grids
 
