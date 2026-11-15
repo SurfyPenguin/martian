@@ -3,13 +3,18 @@
 ## Scope (MVP, solo, ~1 day)
 - Two supplied, clipped sites in Gale Crater: Gale crater floor and Southern box
 - CTX imagery, elevation, slope/roughness hazard, route, and target layers
-- One route between three placeholder science targets per site via A*
+- Up to three hazard-safe route options between three placeholder science targets
+  per site, with an adjustable algorithm and safety margin
 - Assumption-based dose and EVA safety summary
 
 ## Definition of done
 - `python scripts/slope.py --site <site>` and `python scripts/route.py --site <site>`
   produce per-site outputs
 - Opening web/index.html shows layer toggles, route, and safety sidebar
+- Shared hazard mask is the single source for the overlay and both routers;
+  no route may cross a hazard or safety-margin cell
+- Algorithm options report timing and explored cells; alternatives remain
+  selectable and pass per-cell hazard verification
 - README explains how to run it in under 5 steps
 
 ## Done
@@ -93,6 +98,22 @@
   when the mission panel is hidden
 - Verified Python/browser route parity for all eight stored route legs and
   exercised mobile checkpoint placement without console or network errors
+- Made slope/roughness/NoData hazards one exported mask shared by the red overlay,
+  Python routing, and browser costs; hazard cells are infinite-cost and diagonal
+  moves cannot cut blocked corners
+- Added a labeled, adjustable two-cell safety margin, six-cell soft clearance
+  penalty, endpoint snapping, and cell-center route/overlay verification
+- Verified both sites' auto routes plus 20 random three-checkpoint sets per site
+  in Python and JavaScript with Bresenham cell checks; synthetic diagonal-gap
+  tests confirm corner cutting is blocked
+- Added A* (octile), Dijkstra, and Weighted A* (default epsilon 1.5) choices,
+  with optimality explanations, per-route time/exploration metrics, and
+  A*/Dijkstra cost comparisons for 20 random pairs per site (all within 0.1%)
+- Added selectable Fastest, Safer, and Alternate route cards with time, distance,
+  dose estimate, minimum clearance, EVA-limit status, and map selection
+- Captured route-card screenshots for both sites in docs/screenshots/
+- Regenerated site routes: site1 9.810 km / 3.270 h (within limit); site2
+  18.619 km / 6.206 h (over limit; assumptions were not relaxed)
 
 ## In progress
 (nothing)
@@ -103,5 +124,5 @@
 
 ## Next
 1. Replace placeholder habitat and target coordinates with mission points
-2. Add destination photos if their provenance is available
-3. Add validated science or environmental sources before presenting them as layers
+2. Record product IDs and acquisition dates if the source provenance is provided
+3. Add validated radiation or weather sources before presenting them as layers

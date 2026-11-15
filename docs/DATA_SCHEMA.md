@@ -18,13 +18,17 @@ DEM values are elevation in meters. DEM NoData is treated as impassable; slope i
 
 | File | Contents |
 |---|---|
-| `cost.json` | Site key, row/column dimensions, geographic bounds, x/y cell sizes in meters, encoding, impassable sentinel, and route assumptions from `scripts/config.py` |
-| `cost.bin` | One little-endian Float32 cost per DEM cell, row-major, with exactly `rows * cols * 4` bytes |
+| `cost.json` | Versioned grid metadata, geographic bounds, x/y cell sizes, route assumptions/settings, and the shared hazard/clearance file names |
+| `cost.bin` | One little-endian Float32 cost per DEM cell, row-major; hazard cells are positive infinity |
+| `clearance-cells.bin` | Euclidean distance in cells from each cell center to the nearest hazard cell |
+| `clearance-meters.bin` | Euclidean distance in meters from each cell center to the nearest hazard cell, using the raster's physical x/y cell sizes |
 
-Cells that fail the configured slope or roughness walkability limits, or have
-invalid inputs, contain `-1` and are impassable. Other cells contain
-`1 + (slope / max_slope)^slope_cost_power + (roughness / max_roughness) * roughness_cost_weight`.
-Browser A* multiplies each destination cell's cost by the 8-neighbor distance,
-using the x and y cell sizes from `cost.json`. This preserves the Python route
-cost model. Manual checkpoints are kept in browser memory and are not written
-back to these generated files.
+The red hazard overlay, Python router, and browser planner use the same exported
+mask: configured slope or roughness hazards and invalid/NoData cells are
+blocked. The two-cell safety margin is separately configurable in the UI;
+clearance cost is soft and does not change the red mask. Finite route costs are
+`1 + (slope / max_slope)^slope_cost_power + (roughness / max_roughness) * roughness_cost_weight`
+plus the configured soft-clearance penalty. Neighbor traversal cost multiplies
+the destination cell cost by the 8-neighbor distance using the physical x/y
+cell sizes. Checkpoints that fall inside the selected margin are snapped to the
+nearest free cell and reported in the interface.

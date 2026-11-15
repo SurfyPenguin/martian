@@ -34,7 +34,8 @@ the placeholders before operational use.
 **Scope (current MVP):**
 - Two selectable sites
 - CTX imagery, elevation, slope, and slope/roughness hazard layers
-- Live A* routes between manually placed checkpoints and back to habitat
+- Live A*, Dijkstra, or Weighted A* routes between manually placed checkpoints
+  and back to habitat, with selectable Fastest, Safer, and Alternate options
 - Auto plan using three placeholder science targets
 - Per-site checkpoint plans held in memory for the current page session
 - Assumption-based dose and EVA safety summary
@@ -57,9 +58,10 @@ available in this repository.
 
 1. **Layer toggles** for all current datasets on one map.
 2. **Hazard map** flagging slope and rough terrain.
-3. **Route planner:** Browser-side A* pathfinding over exported slope and
-   roughness costs between checkpoints, with distance, time, dose, and
-   unreachable-leg feedback.
+3. **Route planner:** Browser-side A*, Dijkstra, or Weighted A* pathfinding over
+   one exported hazard mask and terrain-cost grid, with hazard clearance,
+   distance, time, dose, and unreachable-leg feedback. Alternative routes are
+   checked against the same blocked cells before display.
 4. **Safety sidebar:** assumption-based dose estimate, EVA time budget, and
    distance back to habitat.
 5. **Checkpoint controls:** add checkpoints by clicking the map, drag to move,
@@ -74,9 +76,9 @@ scripts/
   config.py      site paths, coordinates, and labeled assumptions
   inspect_data.py  input schema inspection
   make_backdrop.py decimated context imagery/hillshade -> web/data/
-  slope.py       DEM -> meter-scaled slope/roughness -> hazard and PNG layers
-  route.py       A* over the cost map -> data/processed/<site>/;
-                 browser cost grids -> web/data/<site>/
+  slope.py       DEM -> meter-scaled slope/roughness -> shared hazard mask/PNG
+  route.py       Python A* reference -> processed routes and browser cost/
+                 clearance grids under web/data/<site>/
 data/processed/  supplied inputs and per-site rasters, PNGs, route, stats, grid
 web/
   index.html, app.js, geo.js, style.css   Leaflet app and shared projection
@@ -84,10 +86,10 @@ web/
 ```
 
 **Pipeline:** inspect inputs -> generate decimated backdrop context -> compute
-meter-scaled slope and 5x5 roughness -> build traversability score -> run A*
-per site -> export aligned PNG, GeoJSON, stats, route metadata, and browser
-cost grids -> Leaflet loads both sites and route grids in the shared Mars map
-projection.
+meter-scaled slope and 5x5 roughness -> export one shared hazard mask and
+clearance grids -> run the Python reference route -> export aligned PNG,
+GeoJSON, stats, route metadata, and browser cost grids -> Leaflet loads both
+sites and route grids in the shared Mars map projection.
 
 ## 6. Assumptions
 
@@ -96,6 +98,7 @@ UI:
 
 - Maximum walkable slope
 - Maximum 5x5 elevation standard deviation
+- Two-cell hazard clearance margin and soft clearance cost
 - Walking speed
 - EVA duration
 - Dose rate used only for a planning estimate

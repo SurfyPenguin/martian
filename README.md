@@ -29,6 +29,14 @@ plan to edit the route. The optional return-to-Habitat toggle updates the route
 and safety summary immediately. Manual stops last only for the current page
 session.
 
+Expand **Mission Checkpoints** to choose A*, Dijkstra, or Weighted A* and
+compare the selectable Fastest, Safer, and Alternate routes. The sidebar's
+safety-margin slider adjusts hazard clearance; mission points inside the margin
+are snapped to free cells and reported.
+
+Run the safety checks with `python scripts/check_hazards.py`,
+`node scripts/check_hazards.js`, and `node scripts/check_algorithms.js`.
+
 ## Optional placeholder fallback
 
 Synthetic generation is disabled by default and is never part of the web
