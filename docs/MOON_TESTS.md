@@ -146,4 +146,44 @@ Processing peaked at 260,996 KB RSS. The Python verifier peaked at
 173,112 KB; the JavaScript verifier peaked at 146,204 KB. All site output
 files are below 1 MB.
 
-`sl3` has not yet been processed or verified.
+## sl3: Connecting Ridge Extension
+
+| Measurement | Result |
+|---|---:|
+| Routing cell size | 10 m |
+| Elevation min / max / standard deviation | 706.010 / 1543.718 / 196.842 m |
+| DEM NoData cells | 0 |
+| Supplied-vs-derived slope mean absolute difference | 0.3218 degrees |
+| Source 5 m pixels with recorded LOLA returns | 2.9643% |
+| Hazard fraction | 14.88% |
+| Largest passable component | 67.40% |
+| Chokepoints at configured margin | 0 |
+| Automatic placeholder round trip | 9.236 km / 3.079 h |
+| Automatic return margin | 0.921 h |
+
+Both verifiers confirmed that straight target-to-target lines cross hazards.
+All four automatic route legs and 20 random checkpoint sets per verifier had
+zero hazard cells. Minimum automatic-route clearance was 22.4 m.
+
+| Edge case | Python result | JavaScript result |
+|---|---|---|
+| Checkpoint on hazard | Snapped 458.8 m to free cell (13, 44) | Snapped 458.8 m to free cell (13, 44) |
+| Checkpoint inside safety margin | Snapped 376.4 m to free cell (13, 44) | Snapped 376.4 m to free cell (13, 44) |
+| Disconnected pocket | No walkable route | Leg marked unreachable (`NO SAFE PATH`) |
+| Over-limit round trip | 18.356 km / 6.119 h, over the four-hour assumption | 18.356 km / 6.119 h, over the four-hour assumption |
+
+Each implementation compared A* and Dijkstra on 20 random pairs. All costs
+matched exactly at the printed precision; maximum relative difference was
+0.000%. Timing and explored-cell counts are means.
+
+| Implementation | A* ms | Dijkstra ms | A* explored | Dijkstra explored |
+|---|---:|---:|---:|---:|
+| Python | 449.79 | 935.00 | 26,322 | 62,302 |
+| JavaScript | 42.54 | 68.00 | 45,153 | 89,689 |
+
+Processing peaked at 258,652 KB RSS. The Python verifier peaked at
+181,680 KB; the JavaScript verifier peaked at 153,844 KB. All site output
+files are below 1 MB.
+
+All four Moon sites are processed. Final browser checks of every Moon site and
+the four-site Mars regression are pending.

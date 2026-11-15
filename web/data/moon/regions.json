@@ -193,8 +193,8 @@
       "properties": {
         "name": "Connecting Ridge Extension",
         "source_id": 5,
-        "site_key": null,
-        "has_elevation_data": false
+        "site_key": "sl3",
+        "has_elevation_data": true
       },
       "geometry": {
         "type": "Polygon",
