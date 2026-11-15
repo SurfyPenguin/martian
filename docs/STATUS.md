@@ -114,6 +114,18 @@
 - Captured route-card screenshots for both sites in docs/screenshots/
 - Regenerated site routes: site1 9.810 km / 3.270 h (within limit); site2
   18.619 km / 6.206 h (over limit; assumptions were not relaxed)
+- Unified map and form-control typography with the sidebar's monospace font;
+  removed tight tracking from monospace titles and metadata
+- Clarified checkpoint leg coordinates with labeled latitude/longitude rows,
+  reduced detail-grid density, and auto-dismissed successful edit notices
+- Fixed the map coordinate readout to read Leaflet `LatLng` coordinates, so
+  backdrop coordinates and habitat distance stay numeric outside site bounds
+- Verified refreshed Fastest, Safer, and Alternate cards are calculated by the
+  browser planner; selecting each updates metrics and displays its distinct path
+- Added 10% zoom slider steps and mapped 300% to the active site's checkpoint
+  detail zoom, with the map's zoom-in controls capped at the same level
+- Rewrote README setup and usage instructions; documented NASA dataset
+  provenance limits, map layers, EVA assumptions, challenge links, and AI use
 
 ## In progress
 (nothing)
