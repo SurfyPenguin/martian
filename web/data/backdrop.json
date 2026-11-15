@@ -1,17 +1,17 @@
 {
   "data_status": "REAL NASA data - lower-resolution surrounding context only",
   "center": {
-    "lat": -4.690539818248494,
-    "lon": 137.2127802473683
+    "lat": -4.587218684550656,
+    "lon": 137.4261420194868
   },
   "layers": {
     "imagery": {
       "path": "web/data/backdrop_ctx.webp",
       "bounds": {
-        "min_lon": 135.18425930336832,
-        "min_lat": -6.573298778248494,
-        "max_lon": 139.2413011913683,
-        "max_lat": -2.8077808582484947
+        "min_lon": 137.12247113204074,
+        "min_lat": -4.925474311955847,
+        "max_lon": 137.72981290693286,
+        "max_lat": -4.248963057145466
       }
     },
     "hillshade": {

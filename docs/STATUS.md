@@ -73,7 +73,7 @@
 - Made the scale bar choose a readable distance from the current zoom instead
   of stretching across the map or staying fixed at 1 km
 - Added a decimated NASA CTX and DEM hillshade context generator; both WebP
-  overview assets are under 3 MB and their bounds come from the source rasters
+  overview assets are under 3 MB, share the DEM footprint, and are about 18 m/px
 - Added a shared Mars equirectangular projection for backdrops, site overlays,
   raster-cell centers, routes, targets, coordinate readout, and scale bar
 - Kept both sites' imagery, terrain, slope, hazard, route, and target layers

@@ -13,6 +13,7 @@ import numpy as np
 import rasterio
 from PIL import Image
 from rasterio.enums import Resampling
+from rasterio.windows import Window, bounds as window_bounds, from_bounds
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -32,8 +33,8 @@ def raster_bounds(path: Path) -> dict[str, float]:
         }
 
 
-def decimated_shape(source: rasterio.DatasetReader) -> tuple[int, int]:
-    height = max(1, round(source.height * TARGET_WIDTH / source.width))
+def decimated_shape(width: float, height: float) -> tuple[int, int]:
+    height = max(1, round(height * TARGET_WIDTH / width))
     return height, TARGET_WIDTH
 
 
@@ -57,12 +58,37 @@ def scale_to_rgba(values: np.ndarray, valid: np.ndarray) -> np.ndarray:
     return rgba
 
 
-def write_overview(path: Path, output: Path, *, resampling: Resampling) -> None:
+def write_overview(
+    path: Path,
+    output: Path,
+    *,
+    resampling: Resampling,
+    bounds: dict[str, float] | None = None,
+) -> dict[str, float]:
     with rasterio.open(path) as source:
-        height, width = decimated_shape(source)
+        window = (
+            from_bounds(
+                bounds["min_lon"],
+                bounds["min_lat"],
+                bounds["max_lon"],
+                bounds["max_lat"],
+                source.transform,
+            )
+            if bounds
+            else Window(0, 0, source.width, source.height)
+        )
+        if (
+            window.col_off < 0
+            or window.row_off < 0
+            or window.col_off + window.width > source.width
+            or window.row_off + window.height > source.height
+        ):
+            raise ValueError(f"Requested overview bounds are outside {path}")
+        height, width = decimated_shape(window.width, window.height)
         values = source.read(
             1,
             out_shape=(height, width),
+            window=window,
             resampling=resampling,
             masked=True,
         )
@@ -71,7 +97,14 @@ def write_overview(path: Path, output: Path, *, resampling: Resampling) -> None:
             data = np.asarray(values.astype("float32").filled(np.nan), dtype="float32")
         else:
             data = np.asarray(values, dtype="float32")
+        left, bottom, right, top = window_bounds(window, source.transform)
     write_rgba_png(output, scale_to_rgba(data, valid & np.isfinite(data)))
+    return {
+        "min_lon": left,
+        "min_lat": bottom,
+        "max_lon": right,
+        "max_lat": top,
+    }
 
 
 def write_rgba_png(path: Path, rgba: np.ndarray) -> None:
@@ -93,7 +126,7 @@ def create_hillshade(output: Path) -> None:
         decimated_dem = temp_dir_path / "dem_decimated.tif"
         hillshade = temp_dir_path / "hillshade.tif"
         with rasterio.open(source) as dataset:
-            height, width = decimated_shape(dataset)
+            height, width = decimated_shape(dataset.width, dataset.height)
         subprocess.run(
             [
                 "gdal_translate",
@@ -132,7 +165,13 @@ def main() -> None:
     ctx_output = OUTPUT_DIR / "backdrop_ctx.webp"
     hillshade_output = OUTPUT_DIR / "backdrop_hillshade.webp"
 
-    write_overview(ctx_path, ctx_output, resampling=Resampling.average)
+    dem_bounds = raster_bounds(dem_path)
+    ctx_bounds = write_overview(
+        ctx_path,
+        ctx_output,
+        resampling=Resampling.average,
+        bounds=dem_bounds,
+    )
     create_hillshade(hillshade_output)
     backdrop = {
         "data_status": "REAL NASA data - lower-resolution surrounding context only",
@@ -140,11 +179,11 @@ def main() -> None:
         "layers": {
             "imagery": {
                 "path": "web/data/backdrop_ctx.webp",
-                "bounds": raster_bounds(ctx_path),
+                "bounds": ctx_bounds,
             },
             "hillshade": {
                 "path": "web/data/backdrop_hillshade.webp",
-                "bounds": raster_bounds(dem_path),
+                "bounds": dem_bounds,
             },
         },
     }

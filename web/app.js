@@ -112,9 +112,9 @@ function addScaleBar(map) {
     ];
     element.setAttribute("aria-label", "Map scale");
     const update = () => {
-      const start = map.latLngToContainerPoint([0, 0]);
-      const oneCell = map.latLngToContainerPoint([0, 1]);
-      const metersPixels = Math.abs(oneCell.x - start.x);
+      const start = map.project([0, 0]);
+      const kilometer = map.project([0, 1000]);
+      const metersPixels = Math.abs(kilometer.x - start.x) / 1000;
       const targetPixels = 120;
       const maxScaleM = targetPixels / metersPixels;
       const desiredM = scaleValuesM.reduce(
@@ -455,7 +455,7 @@ function addBackdrop(backdrop) {
   const spanX = backdropBounds[1][1] - backdropBounds[0][1];
   const labelPoint = [
     backdropBounds[1][0] - spanY * .1,
-    backdropBounds[0][1] + spanX * .36,
+    backdropBounds[0][1] + spanX * .04,
   ];
   L.marker(labelPoint, {
     icon: L.divIcon({
