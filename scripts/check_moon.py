@@ -18,7 +18,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from config import MOON_RADIUS_M, SAFETY_MARGIN_CELLS  # noqa: E402
-from make_moon_site import lon_lat_to_xy, xy_to_lon_lat  # noqa: E402
+from make_moon_site import (  # noqa: E402
+    lon_lat_to_xy,
+    rgba_with_percentile_clip,
+    xy_to_lon_lat,
+)
 from route import (  # noqa: E402
     astar,
     astar_with_metrics,
@@ -155,6 +159,31 @@ def verify_projection(body):
     print("projection: 3 GeoJSON points round-trip in Python within 1 m")
 
 
+def check_backdrop():
+    output = ROOT / "web" / "data" / "moon"
+    metadata = json.loads((output / "backdrop.json").read_text())
+    image_path = output / metadata["image"]
+    if metadata["percentile_clip"] != [2, 98]:
+        raise AssertionError("Moon roughness backdrop must use its recorded 2-98% clip")
+    if image_path.stat().st_size >= 3 * 1024 * 1024:
+        raise AssertionError("Moon roughness backdrop exceeds 3 MB")
+    with Image.open(image_path) as image:
+        rgba = np.asarray(image.convert("RGBA"))
+    if list(rgba.shape[:2]) != metadata["overview_shape"]:
+        raise AssertionError("Moon roughness backdrop dimensions differ from metadata")
+    if not np.isin(rgba[..., 3], (0, 255)).all():
+        raise AssertionError("Moon roughness backdrop alpha is not binary")
+
+    sample = np.array([[0.0, 1.0], [2.0, np.nan]], dtype="float32")
+    transparent = rgba_with_percentile_clip(sample, np.isfinite(sample))
+    if transparent[1, 1, 3] != 0 or np.any(transparent[0, :, 3] != 255):
+        raise AssertionError("Moon backdrop NoData transparency is incorrect")
+    print(
+        f"backdrop: {rgba.shape[1]}x{rgba.shape[0]} RGBA, "
+        f"{image_path.stat().st_size} bytes, 2-98% clip; NoData transparent"
+    )
+
+
 def load_site(site_key):
     output = ROOT / "data" / "processed" / "moon" / site_key
     web_output = ROOT / "web" / "data" / "moon" / site_key
@@ -251,19 +280,30 @@ def check_endpoint_and_eva_cases(
         f"to {snapped_margin}"
     )
 
-    synthetic_costs = np.ones((20, 20), dtype="float32")
-    synthetic_costs[:, 10] = np.inf
-    synthetic_walkable = np.isfinite(synthetic_costs)
+    labels, component_count = ndimage.label(
+        walkable, structure=ndimage.generate_binary_structure(2, 1)
+    )
+    habitat = (grid["habitat"]["row"], grid["habitat"]["col"])
+    habitat_label = int(labels[habitat])
+    component_sizes = np.bincount(labels.ravel(), minlength=component_count + 1)
+    component_sizes[0] = 0
+    component_sizes[habitat_label] = 0
+    pocket_label = int(np.argmax(component_sizes))
+    if component_sizes[pocket_label] == 0:
+        raise AssertionError(f"{site_key} has no disconnected passable pocket")
+    pocket_flat = int(np.flatnonzero(labels.ravel() == pocket_label)[0])
+    pocket = tuple(divmod(pocket_flat, walkable.shape[1]))
     try:
-        astar((10, 4), (10, 16), synthetic_walkable, synthetic_costs, 10, 10)
+        astar(habitat, pocket, walkable, costs, cell_size["x"], cell_size["y"])
     except ValueError as error:
         if "No walkable route" not in str(error):
             raise
-        print(f"{site_key} disconnected checkpoint: no safe path; {error}")
+        print(
+            f"{site_key} actual disconnected pocket {pocket}: no safe path; {error}"
+        )
     else:
         raise AssertionError(f"{site_key} disconnected pocket unexpectedly routed")
 
-    habitat = (grid["habitat"]["row"], grid["habitat"]["col"])
     targets = [(point["row"], point["col"]) for point in grid["targets"]]
     points = [habitat, *targets, *targets, habitat]
     route = []
@@ -386,6 +426,7 @@ def main():
     args = parser.parse_args()
     body = json.loads((ROOT / "web" / "data" / "moon" / "body.json").read_text())
     verify_projection(body)
+    check_backdrop()
     check_synthetic_corner_gap()
     check_site(args.site, args.random_pairs, args.random_sets)
 

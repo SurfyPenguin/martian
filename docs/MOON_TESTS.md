@@ -6,6 +6,10 @@ the configured two-cell safety margin, 15-degree slope limit, 15 m roughness
 limit, 3 km/h walking-speed assumption, and four-hour EVA assumption. These
 are assumptions, not validated mission limits.
 
+The roughness backdrop is a 304 x 304 PNG (198,357 bytes) scaled with a
+2nd-to-98th percentile clip. Its valid source overview pixels are opaque; the
+Python checker also verifies that invalid pixels become transparent.
+
 ## site_01: Connecting Ridge
 
 | Measurement | Result |
@@ -185,5 +189,22 @@ Processing peaked at 258,652 KB RSS. The Python verifier peaked at
 181,680 KB; the JavaScript verifier peaked at 153,844 KB. All site output
 files are below 1 MB.
 
-All four Moon sites are processed. Final browser checks of every Moon site and
-the four-site Mars regression are pending.
+## Final verification (2026-11-15)
+
+All checks re-ran on the completed branch under `/usr/bin/time -v`. The four
+Python verifier peaks were site_01 178,048 KB, site_04 149,912 KB, site_07
+185,096 KB, and sl3 185,056 KB RSS; every result matched the per-site tables
+above. The disconnected-pocket cases now exercise actual disconnected
+passable pockets located on each site's route grid instead of a synthetic
+20 x 20 grid; each correctly reported `NO SAFE PATH`.
+
+The Mars regression passed: `check_hazards.py`, `check_hazards.js`,
+`check_algorithms.js` (80 A*/Dijkstra pairs within 0.1%), and
+`check_site_edge_cases.py` all exited zero.
+
+A headless Chrome check drove the real page through the body selector:
+Mars default, one restored auto plan on each of the four Mars sites, all four
+Moon sites with restored auto plans, and a switch back to Mars site1. The Moon
+sites showed the hillshade/slope/hazard/support layers, hid the Mars-only CTX
+imagery row, and labeled the dose control "Lunar dose". No console errors,
+page errors, or failed network requests appeared in either mode.

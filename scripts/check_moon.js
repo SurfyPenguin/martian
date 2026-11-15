@@ -41,6 +41,23 @@ function checkProjection() {
   console.log("projection: 3 GeoJSON points round-trip in JavaScript within 1 m");
 }
 
+function checkBackdrop() {
+  const directory = path.join(root, "web", "data", "moon");
+  const metadata = JSON.parse(fs.readFileSync(
+    path.join(directory, "backdrop.json"),
+    "utf8",
+  ));
+  const image = fs.readFileSync(path.join(directory, metadata.image));
+  assert.deepEqual(metadata.percentile_clip, [2, 98]);
+  assert.ok(image.length < 3 * 1024 * 1024);
+  assert.equal(image.readUInt32BE(16), metadata.overview_shape[1]);
+  assert.equal(image.readUInt32BE(20), metadata.overview_shape[0]);
+  console.log(
+    `backdrop: ${metadata.overview_shape[1]}x${metadata.overview_shape[0]} PNG, `
+    + `${image.length} bytes, 2-98% clip`,
+  );
+}
+
 function loadSite(site) {
   const processed = path.join(root, "data", "processed", "moon", site);
   const directory = path.join(root, "web", "data", "moon", site);
@@ -215,37 +232,34 @@ function checkEndpointAndEvaCases(site, grid, routeGrid) {
     + `to ${marginSnap.row},${marginSnap.col}`,
   );
 
-  const syntheticGrid = {
-    rows: 20,
-    cols: 20,
-    cellSizeM: { x: 10, y: 10 },
-    costs: new Float32Array(400).fill(1),
-    clearanceCells: new Float32Array(400).fill(10),
-    clearanceMeters: new Float32Array(400).fill(100),
-    parameters: {
-      safety_margin_cells: 0,
-      walking_speed_kmh: 3,
-      eva_hours: 4,
-      dose_rate_msv_per_hour: null,
-    },
-  };
-  for (let row = 0; row < syntheticGrid.rows; row += 1) {
-    const index = row * syntheticGrid.cols + 10;
-    syntheticGrid.costs[index] = Infinity;
-    syntheticGrid.clearanceCells[index] = 0;
-  }
+  const habitat = [grid.habitat.row, grid.habitat.col];
+  const connectedCells = reachableComponent(routeGrid, habitat);
+  const connected = new Set(connectedCells);
+  const pocketIndex = routeGrid.costs.findIndex((cost, index) => (
+    Number.isFinite(cost)
+      && routeGrid.clearanceCells[index] > margin
+      && !connected.has(index)
+  ));
+  assert.notEqual(pocketIndex, -1, `${site} has no disconnected passable pocket`);
+  const pocket = [
+    Math.floor(pocketIndex / routeGrid.cols),
+    pocketIndex % routeGrid.cols,
+  ];
   const disconnected = RoutePlanner.planRoute(
-    syntheticGrid,
-    { row: 10, col: 4 },
-    [{ row: 10, col: 16 }],
+    routeGrid,
+    grid.habitat,
+    [{ row: pocket[0], col: pocket[1] }],
     false,
     null,
     null,
-    0,
+    margin,
   );
   assert.equal(disconnected.unreachable, true);
   assert.equal(disconnected.legs[0].unreachable, true);
-  console.log(`${site} disconnected checkpoint: NO SAFE PATH; leg marked unreachable`);
+  console.log(
+    `${site} actual disconnected pocket ${pocket}: NO SAFE PATH; `
+    + "leg marked unreachable",
+  );
 
   const checkpoints = [...grid.targets, ...grid.targets];
   const repeatedRoute = RoutePlanner.planRoute(
@@ -340,6 +354,7 @@ function main() {
   const randomSets = Number(process.argv[4] || 20);
   assert.ok(["site_01", "site_04", "site_07", "sl3"].includes(site), "pass a Moon site id");
   checkProjection();
+  checkBackdrop();
   checkSite(site, randomPairs, randomSets);
 }
 

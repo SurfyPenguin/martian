@@ -217,6 +217,29 @@ def rgba_with_validity(values: np.ndarray, valid: np.ndarray) -> np.ndarray:
     return rgba_from_scalar(values, valid & np.isfinite(values))
 
 
+def rgba_with_percentile_clip(
+    values: np.ndarray,
+    valid: np.ndarray,
+    lower_percentile: float = 2,
+    upper_percentile: float = 98,
+) -> np.ndarray:
+    good = valid & np.isfinite(values)
+    rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
+    if not np.any(good):
+        return rgba
+    lower, upper = np.percentile(
+        values[good], [lower_percentile, upper_percentile]
+    )
+    if upper == lower:
+        scaled = np.full(values.shape, 127, dtype=np.uint8)
+    else:
+        scaled = np.clip((values - lower) / (upper - lower) * 255, 0, 255)
+        scaled = np.nan_to_num(scaled, nan=0).astype("uint8")
+    rgba[..., :3] = scaled[..., None]
+    rgba[..., 3] = np.where(good, 255, 0)
+    return rgba
+
+
 def write_float_raster(
     path: Path,
     values: np.ndarray,
@@ -387,12 +410,16 @@ def write_background_and_regions(
         )
         rough_valid = valid_data(roughness, source.nodata)
         rough_bounds = source.bounds
-    write_png(WEB_DIR / "roughness_backdrop.png", rgba_with_validity(roughness, rough_valid))
+    write_png(
+        WEB_DIR / "roughness_backdrop.png",
+        rgba_with_percentile_clip(roughness, rough_valid),
+    )
     (WEB_DIR / "backdrop.json").write_text(json.dumps({
         "data_status": "REAL - NASA LOLA roughness product",
         "product": BODY["roughness_file"],
         "source_resolution_m": 1000,
         "overview_shape": list(decimated_shape),
+        "percentile_clip": [2, 98],
         "bounds": {
             "min_x": rough_bounds.left,
             "min_y": rough_bounds.bottom,
