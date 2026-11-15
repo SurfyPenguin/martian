@@ -2,6 +2,33 @@
 
 One entry per target, newest work described factually. Branch: `feat/moon`.
 
+## Target 2 - automated alignment tests (2026-11-15)
+
+- Added `scripts/check_moon_alignment.py`: prints a PASS/FAIL table and exits
+  nonzero on any FAIL. Python side uses `moon_geo.py` (pyproj transformer from
+  the raster's CRS); browser side runs the web app's own `web/geo.js`
+  functions (`gridToMap`, `latLonToMap`, `moonXYToLonLat`, `setGeoReference`)
+  under Node.
+- Coverage: (a) all 17 overlay layers' `layers.json` bounds vs their GeoTIFF
+  bounds within one pixel plus PNG shape vs raster shape at the overlay's own
+  resolution; (b) highest and lowest elevation pixel of each site's
+  elevation GeoTIFF mapped through Python and through the browser's own
+  `gridToMap`, agreeing within one 10 m cell (no y flip, no x shift);
+  (c) all 14 region centers equal across geojson->Python, `regions.json`, and
+  the browser; (d) JS inverse projection vs Python within 1 m (measured
+  0.0000 m) on 5 test points; (e) backdrop overlay width/height equals
+  cols/rows x 1,000 m exactly.
+- Result: 45/45 PASS on the current branch. The alignment of the existing
+  data exports and browser code was verified correct; no data or JS fixes
+  were needed. The three first-run FAILs were bugs in the checker itself and
+  were fixed in the checker (documented here so the history is honest): the
+  Python y used the wrong affine coefficient (`transform[3]` instead of
+  `transform[4]`), the JS inverse test fed lon/lat degrees where projected
+  meters were required, and the backdrop PNG-shape check demanded 1:1
+  resolution although that PNG is deliberately decimated to 2,000 m/px
+  (608 -> 304, recorded in `backdrop.json`).
+- Peak RSS 123,900 KB.
+
 ## Target 1 - one source of truth for geometry (2026-11-15)
 
 - Added `pyproj` to `requirements.txt` (installed pyproj 3.8.0) and created
